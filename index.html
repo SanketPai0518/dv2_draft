@@ -480,29 +480,42 @@ function thresholdMapSpec(values, threshold){
     layer: [
       { data: { sphere: true }, mark: { type: "geoshape", fill: "#eaf3ff" } },
       { data: { graticule: { step: [30,30] } }, mark: { type: "geoshape", stroke: "#bcd0e3", strokeWidth: 0.6, filled: false } },
+
+      // Draw ALL countries, then lookup the year each crossed the threshold.
       {
         data: { url: GEOJSON, format: { type: "json", property: "features" } },
         transform: [
           { calculate: "upper((isValid(datum.properties['ISO3166-1-Alpha-3']) ? datum.properties['ISO3166-1-Alpha-3'] : (isValid(datum.properties.ISO_A3) ? datum.properties.ISO_A3 : (isValid(datum.properties.ADM0_A3) ? datum.properties.ADM0_A3 : datum.properties.SOV_A3))))", as: "iso_raw" },
           { calculate: "replace(datum.iso_raw, ' ', '')", as: "iso3" },
-          { lookup: "iso3", from: { data: { values }, key: "code", fields: ["yearCross","country"] } }
+          { lookup: "iso3", from: { data: { values }, key: "code", fields: ["yearCross","country"] } },
+
+          // For coloring + tooltip:
+          { calculate: "isValid(datum.yearCross) ? datum.yearCross : null", as: "yearFill" },
+          { calculate: "isValid(datum.yearCross) ? toString(datum.yearCross) : 'Not reached'", as: "yearLabel" }
         ],
         mark: { type: "geoshape" },
         encoding: {
           shape: { field: "geometry", type: "geojson" },
-          color: { field: "yearCross", type: "quantitative", title: `Year reached ≥${threshold}% internet`, scale: { scheme: "tealblues" } },
+          // Continuous heatmap by year; countries that never reached use naColor (soft grey)
+          color: {
+            field: "yearFill", type: "quantitative",
+            title: `Year reached ≥${threshold}% internet`,
+            scale: { scheme: "tealblues", naColor: "#f1f5f9" }   // << key line
+          },
           tooltip: [
             { field: "country",  title: "Country" },
             { field: "iso3",     title: "ISO3" },
-            { field: "yearCross",title: `Year ≥${threshold}%` }
+            { field: "yearLabel",title: `Year ≥${threshold}%` }
           ]
         }
       },
+
+      // Borders on top
       { data: { url: GEOJSON, format: { type: "json", property: "features" } },
         mark: { type: "geoshape", filled: false, stroke: "#ffffff", strokeWidth: 0.5 },
         encoding: { shape: { field: "geometry", type: "geojson" } } }
     ],
-    config: { view: { stroke: null }, legend: { orient: "right", titleFontWeight: "bold" }, axis: { labelFontSize: 12, titleFontSize: 12 } }
+    config: { view: { stroke: null }, legend: { orient: "right", titleFontWeight: "bold" } }
   };
 }
 
