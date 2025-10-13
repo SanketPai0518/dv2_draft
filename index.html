@@ -209,7 +209,7 @@ async function loadWorldBankWideAsLong(url, indicatorCode){
 }
 
 /* --- Simple long CSV (Code,Year,Value) like ITU price baskets --- */
-// REPLACE your loadLongCodeYearValue with this ITU-aware version
+
 async function loadLongCodeYearValue(url){
   const txt = await safeFetch(url);
   if (!txt) return null;
@@ -472,7 +472,7 @@ function subsSpec(rows, year){
 }
 
 /* ================= VIZ 5: YEAR REACHED THRESHOLD (MAP) ================= */
-function thresholdMapSpec(values, threshold){
+function percentMapSpec(values){  // values: [{code, country, pct}]
   return {
     $schema: "https://vega.github.io/schema/vega-lite/v5.json",
     width: 1000, height: 560, background: "#ffffff", padding: 0,
@@ -480,37 +480,28 @@ function thresholdMapSpec(values, threshold){
     layer: [
       { data: { sphere: true }, mark: { type: "geoshape", fill: "#eaf3ff" } },
       { data: { graticule: { step: [30,30] } }, mark: { type: "geoshape", stroke: "#bcd0e3", strokeWidth: 0.6, filled: false } },
-
-      // Draw ALL countries, then lookup the year each crossed the threshold.
       {
         data: { url: GEOJSON, format: { type: "json", property: "features" } },
         transform: [
           { calculate: "upper((isValid(datum.properties['ISO3166-1-Alpha-3']) ? datum.properties['ISO3166-1-Alpha-3'] : (isValid(datum.properties.ISO_A3) ? datum.properties.ISO_A3 : (isValid(datum.properties.ADM0_A3) ? datum.properties.ADM0_A3 : datum.properties.SOV_A3))))", as: "iso_raw" },
           { calculate: "replace(datum.iso_raw, ' ', '')", as: "iso3" },
-          { lookup: "iso3", from: { data: { values }, key: "code", fields: ["yearCross","country"] } },
-
-          // For coloring + tooltip:
-          { calculate: "isValid(datum.yearCross) ? datum.yearCross : null", as: "yearFill" },
-          { calculate: "isValid(datum.yearCross) ? toString(datum.yearCross) : 'Not reached'", as: "yearLabel" }
+          { lookup: "iso3", from: { data: { values }, key: "code", fields: ["pct","country"] } }
         ],
         mark: { type: "geoshape" },
         encoding: {
           shape: { field: "geometry", type: "geojson" },
-          // Continuous heatmap by year; countries that never reached use naColor (soft grey)
           color: {
-            field: "yearFill", type: "quantitative",
-            title: `Year reached ≥${threshold}% internet`,
-            scale: { scheme: "tealblues", naColor: "#f1f5f9" }   // << key line
+            field: "pct", type: "quantitative",
+            title: "Internet users (% of population, most recent)",
+            scale: { scheme: "blues", domain: [0,100], unknown: "#e5e7eb" } // <-- fill missing with grey
           },
           tooltip: [
-            { field: "country",  title: "Country" },
-            { field: "iso3",     title: "ISO3" },
-            { field: "yearLabel",title: `Year ≥${threshold}%` }
+            { field: "country", title: "Country" },
+            { field: "iso3",    title: "ISO3" },
+            { field: "pct",     title: "Internet (%)", format: ".1f" }
           ]
         }
       },
-
-      // Borders on top
       { data: { url: GEOJSON, format: { type: "json", property: "features" } },
         mark: { type: "geoshape", filled: false, stroke: "#ffffff", strokeWidth: 0.5 },
         encoding: { shape: { field: "geometry", type: "geojson" } } }
@@ -640,43 +631,33 @@ async function renderSubscriptions(){
   }
 }
 
-async function renderThreshold(){
+
+
+async function renderThreshold(){  // repurposed to heatmap of latest %
   const msg = document.getElementById('thrMsg');
-  const ctrl = document.getElementById('thrControls');
-  const thrSel = document.getElementById('thrSel');
+  const ctrl = document.getElementById('thrControls'); // we'll hide it
   try{
     const iu = await loadInternetUsersLong();
 
-    // compute first year crossing threshold per country
-    function compute(thr){
-      const byCode = new Map();
-      for (const r of iu){
-        if (!byCode.has(r.code)) byCode.set(r.code, []);
-        byCode.get(r.code).push(r);
-      }
-      const out=[];
-      for (const [code, arr] of byCode){
-        arr.sort((a,b)=>a.year-b.year);
-        const hit = arr.find(d => d.internet >= thr);
-        if (hit) out.push({ code, country: hit.country, yearCross: hit.year });
-      }
-      return out;
+    // most recent % per country
+    const latestByCode = new Map();
+    for (const r of iu){
+      const cur = latestByCode.get(r.code);
+      if (!cur || r.year > cur.year) latestByCode.set(r.code, r);
     }
+    const values = [...latestByCode.values()].map(d => ({
+      code: d.code, country: d.country, pct: d.internet
+    }));
 
-    ctrl.style.display = "";
-    const render = async () => {
-      const thr = +thrSel.value || 50;
-      const values = compute(thr);
-      msg.textContent = `Year each country first reached ≥${thr}% internet adoption.`;
-      await vegaEmbed("#visThreshold", thresholdMapSpec(values, thr), { actions:false });
-    };
-    thrSel.addEventListener('change', render);
-    await render();
+    ctrl.style.display = "none"; // no threshold control anymore
+    msg.textContent = "Most recent internet adoption (% of population). Grey = no data.";
+    await vegaEmbed("#visThreshold", percentMapSpec(values), { actions:false });
   }catch(e){
     console.error(e);
-    msg.innerHTML = `<div class="warn">Threshold map error: ${e.message.replace(/</g,"&lt;")}</div>`;
+    msg.innerHTML = `<div class="warn">Heatmap error: ${e.message.replace(/</g,"&lt;")}</div>`;
   }
 }
+
 
 /* ================= BOOT ================= */
 renderAffordability();
