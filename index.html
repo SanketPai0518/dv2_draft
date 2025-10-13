@@ -209,25 +209,48 @@ async function loadWorldBankWideAsLong(url, indicatorCode){
 }
 
 /* --- Simple long CSV (Code,Year,Value) like ITU price baskets --- */
+// REPLACE your loadLongCodeYearValue with this ITU-aware version
 async function loadLongCodeYearValue(url){
   const txt = await safeFetch(url);
   if (!txt) return null;
-  const table = d3.csvParse(stripBOMCRLF(txt));
-  // find flexible col names
-  const byNorm = new Map(table.columns.map(c => [c.trim().toLowerCase(), c]));
-  const codeCol = byNorm.get("code") || byNorm.get("country code") || byNorm.get("iso3");
-  const yearCol = byNorm.get("year");
-  const valCol  = byNorm.get("value") || byNorm.get("values") || byNorm.get("percent") || byNorm.get("%") || byNorm.get("pct");
+
+  // handle CSVs that sometimes use tabs/semicolons
+  const normText = stripBOMCRLF(txt).replace(/\t|;/g, ",");
+
+  const table = d3.csvParse(normText);
+  const norm = s => (s||"").trim().toLowerCase();
+
+  const H = new Map(table.columns.map(c => [norm(c), c]));
+
+  // ITU/SDMX style columns
+  const codeCol  = H.get("entityiso") || H.get("code") || H.get("country code") || H.get("iso3");
+  const yearCol  = H.get("datayear")  || H.get("year") || H.get("time_period") || H.get("time");
+  const valCol   = H.get("datavalue") || H.get("value") || H.get("obs_value");
+  const seriesCol= H.get("seriesname") || H.get("indicator") || H.get("series");
+
   if (!(codeCol && yearCol && valCol)) return null;
+
+  // If there are multiple series, keep only the Data-only mobile broadband basket (% GNI)
+  let rowsAll = table;
+  if (seriesCol) {
+    const want = [...new Set(table.map(r => r[seriesCol]))]
+      .find(s => /data[- ]?only.*mobile.*broadband.*(gni|%)/i.test(String(s)));
+    if (want) rowsAll = table.filter(r => r[seriesCol] === want);
+  }
+
   const out = [];
-  for (const r of table){
-    const code = (r[codeCol]||"").toUpperCase().trim();
-    const year = +r[yearCol];
-    const val  = +(String(r[valCol]).replace(/%/g,"").trim());
-    if (code && Number.isFinite(year) && Number.isFinite(val)) out.push({ code, year, value: val });
+  for (const r of rowsAll){
+    const code = String(r[codeCol]||"").trim().toUpperCase();
+    const year = +String(r[yearCol]||"").trim();
+    // strip any % and coerce
+    const value = +String(r[valCol]||"").replace(/%/g,"").trim();
+    if (code && Number.isFinite(year) && Number.isFinite(value)){
+      out.push({ code, year, value });
+    }
   }
   return out.length ? out : null;
 }
+
 
 /* --- GDPpc loader (reusing WB wide) --- */
 async function loadGDPpc(){
