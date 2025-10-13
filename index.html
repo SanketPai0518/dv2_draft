@@ -114,10 +114,11 @@ const GDP_FILE     = "data/API_NY.GDP.PCAP.CD_DS2_en_csv_v2_24794.csv";
 const GEOJSON      = "data/countries.geojson";
 
 /* Add-on datasets */
-const ITU_MBB_PCTGNI  = "data/itu_mobile_broadband_price_pct_gni.csv"; // Code,Year,Value (%, numeric)
-const WB_ELEC          = "data/EG.ELC.ACCS.ZS.csv";     // access to electricity (% pop)
-const WB_MOBILE_SUBS   = "data/IT.CEL.SETS.P2.csv";     // per 100
-const WB_FIXED_SUBS    = "data/IT.NET.BBND.P2.csv";     // per 100
+const ITU_MBB_PCTGNI = "data-only-mobile-broadband-basket_1760356423859"; // <- put your exact ITU file name here
+const WB_ELEC        = "data/API_EG.ELC.ACCS.ZS_DS2_en_csv_v2_568.csv";
+const WB_MOBILE_SUBS = "data/API_IT.CEL.SETS.P2_DS2_en_csv_v2_6405.csv";
+const WB_FIXED_SUBS  = "data/API_IT.NET.BBND.P2_DS2_en_csv_v2_6412.csv";
+
 
 /* ================= UTILITIES ================= */
 function stripBOMCRLF(t){ if (t && t.charCodeAt(0)===0xFEFF) t=t.slice(1); return t.replace(/\r\n?/g,"\n"); }
