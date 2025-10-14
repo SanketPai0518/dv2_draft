@@ -371,7 +371,7 @@ const map2021 = {
         { filter: "isValid(datum.Value)" },
         { filter: "datum.Value >= minPct" },
         { aggregate: [ { op: "count", as: "n" }, { op: "median", field: "Value", as: "med" } ] },
-        { calculate: "'Countries ≥ ' + minPct + '%: ' + datum.n + ' • median = ' + format(datum.med, '.1f') + '%'", as: "label" }
+       // { calculate: "'Countries ≥ ' + minPct + '%: ' + datum.n + ' • median = ' + format(datum.med, '.1f') + '%'", as: "label" }
       ],
       layer: [
         { mark: { type: "text", fontSize: 12, fontWeight: "bold", align: "left", baseline: "top" },
