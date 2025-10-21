@@ -9,6 +9,7 @@ const IU_OWID_LONG = "data/share-of-individuals-using-the-internet.csv";
 const GDP_FILE     = "data/API_NY.GDP.PCAP.CD_DS2_en_csv_v2_24794.csv";
 const GEOJSON      = "data/countries.geojson";
 const WB_ELEC      = "data/API_EG.ELC.ACCS.ZS_DS2_en_csv_v2_568.csv";
+const POP_FILE     = "API_SP.POP.TOTL_DS2_en_csv_v2_23043.csv";  
 
 /* =================== HELPERS =================== */
 const stripBOMCRLF = t => {
@@ -386,6 +387,74 @@ function continentSpec(points, isLog){
   };
 }
 
+/* ============ NEW: TOP COUNTRIES STACKED/GROUPED (facet) ============ */
+function topCountriesSpec(rows){
+  const enriched = rows.map(r => ({ ...r, total_users: (r.internet/100)*r.population }));
+  const byUsers = [...enriched].sort((a,b)=>b.total_users - a.total_users).slice(0,5)
+    .map(d => ({ category:"Top 5 by Users", country:d.country, value:d.total_users/1e6, unit:"M" }));
+  const byPercent = [...enriched].sort((a,b)=>b.internet - a.internet).slice(0,5)
+    .map(d => ({ category:"Top 5 by %", country:d.country, value:d.internet, unit:"%" }));
+
+  return {
+    $schema:"https://vega.github.io/schema/vega-lite/v5.json",
+    background:null,
+    data:{ values:[...byUsers, ...byPercent] },
+    facet:{ column:{ field:"category", type:"nominal", header:{labelColor:"#fff"} } },
+    spec:{
+      width: "container",
+      height: 420,
+      autosize:{ type:"fit", contains:"padding" },
+      mark:{ type:"bar", cornerRadiusEnd:4 },
+      encoding:{
+        x:{ field:"value", type:"quantitative", axis:{grid:false,labelColor:"#dbeafe"},
+            title:null },
+        y:{ field:"country", type:"nominal", sort:"-x", axis:{grid:false,labelColor:"#dbeafe"}, title:null },
+        color:{ field:"country", type:"nominal", legend:null },
+        tooltip:[
+          {field:"country"},
+          {field:"value", title:"Value"},
+          {field:"unit", title:"Unit"}
+        ]
+      },
+      config:{ view:{stroke:null} }
+    }
+  };
+}
+
+/* ============ NEW: RENDERER FOR TOP COUNTRIES ============ */
+async function renderTopCountries(){
+  const msg = document.getElementById('topCountriesMsg');
+  const mount = document.getElementById('visTopCountries');
+  if (!mount) return;
+  try{
+    const [iu, pop] = await Promise.all([
+      loadInternetUsersLong(),
+      loadWBIndicatorCSV(POP_FILE, "population")
+    ]);
+
+    if (!pop) {
+      msg.innerHTML = `<div class="warn">Top countries viz error: population file not found (<code>${POP_FILE}</code>).</div>`;
+      return;
+    }
+
+    const latestIU  = latestByCode(iu, "internet");
+    const latestPop = latestByCode(pop || [], "population");
+
+    const combined = [];
+    for (const [code, u] of latestIU){
+      const p = latestPop.get(code);
+      if (p && Number.isFinite(p.population)) {
+        combined.push({ country: u.country || p.country || code, internet: u.internet, population: p.population });
+      }
+    }
+    await vegaEmbed("#visTopCountries", topCountriesSpec(combined), { actions:false });
+    msg.textContent = "Top 5 by total users (millions) vs Top 5 by % online — latest year available per series.";
+  }catch(e){
+    console.error(e);
+    if (msg) msg.innerHTML = `<div class="warn">Top countries viz error: ${e.message}</div>`;
+  }
+}
+
 /* ================ RENDERERS ================ */
 async function renderTop10(iu){
   const latest = [...latestByCode(iu, "internet").values()];
@@ -552,7 +621,7 @@ async function renderProsperityByContinent(){
     await draw();
   }catch(e){
     console.error(e);
-    msg.innerHTML = `<div class="warn">Continent viz error: ${e.message.replace(/</g,"&lt;")}</div>`;
+    msg.innerHTML = `<div class="warn">Continent viz error: ${e.message.replace(/</g,"&lt")}</div>`;
   }
 }
 
@@ -585,7 +654,7 @@ async function buildContinentMap(){
     BTN:"Asia", IRN:"Asia", IRQ:"Asia", ISR:"Asia", PSE:"Asia", JOR:"Asia",
     SAU:"Asia", ARE:"Asia", QAT:"Asia", KWT:"Asia", BHR:"Asia", OMN:"Asia", YEM:"Asia",
     TUR:"Asia", AZE:"Asia", ARM:"Asia", GEO:"Asia", KAZ:"Asia", KGZ:"Asia",
-    TJK:"Asia", TKM:"Asia", UZB:"Asia", RUS:"Europe", // keep Russia in Europe for viz clarity
+    TJK:"Asia", TKM:"Asia", UZB:"Asia", RUS:"Europe",
     IDN:"Asia", MYS:"Asia", SGP:"Asia", THA:"Asia", VNM:"Asia", LAO:"Asia",
     KHM:"Asia", MMR:"Asia", PHL:"Asia", BRN:"Asia", TLS:"Asia",
     // EUROPE
@@ -656,6 +725,7 @@ function cablesMiniSpec(){
   await renderMaps();
   await renderProsperity();
   await renderProsperityByContinent();
+  await renderTopCountries();   // NEW call
   await renderDensity();
 
   const mini = document.getElementById("visCables");
@@ -664,3 +734,4 @@ function cablesMiniSpec(){
   // If Quick Compare panel exists, render it.
   if (document.getElementById('qcA')) renderQuickCompare();
 })();
+ 

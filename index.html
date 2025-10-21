@@ -28,6 +28,7 @@
         <li><a href="#maps">Maps</a></li>
         <li><a href="#prosperity">Prosperity</a></li>
         <li><a href="#bycontinent">By Continent</a></li>
+        <li><a href="#leaders">Top Countries</a></li>
         <li><a href="#density">Distribution</a></li>
         <li><a href="#sources">Sources</a></li>
       </ul>
@@ -75,6 +76,7 @@
         <li><strong>Maps</strong>: who’s online & where infrastructure gaps remain.</li>
         <li><strong>Prosperity</strong>: GDP per capita vs internet use (with trend).</li>
         <li><strong>By continent</strong>: regional means for GDP & connectivity.</li>
+        <li><strong>Top countries</strong>: the largest and most connected nations.</li>
         <li><strong>Distribution</strong>: density of adoption levels by year.</li>
       </ol>
       <p class="small" style="margin-top:10px">Tip: hover for details. Use dropdowns to change years; try log scale.</p>
@@ -149,6 +151,18 @@
         </div>
       </section>
 
+      <!-- NEW: Top countries (inserted here) -->
+      <section class="section" id="leaders">
+        <div class="section-title">
+          <h2>Leaders online — Top 5 countries</h2>
+          <div class="small">Left: by total internet users (millions). Right: by % of population online.</div>
+        </div>
+        <div class="viz">
+          <div id="visTopCountries"></div>
+          <div class="caption" id="topCountriesMsg"></div>
+        </div>
+      </section>
+
       <!-- Density -->
       <section class="section" id="density">
         <div class="section-title">
@@ -177,6 +191,7 @@
             <code>internet_users_2021.csv</code>,
             <code>share-of-individuals-using-the-internet.csv</code>,
             <code>API_NY.GDP.PCAP.CD_DS2_en_csv_v2_24794.csv</code>,
+            <code>API_SP.POP.TOTL_DS2_en_csv_v2_24794.csv</code>,
             <code>data-only-mobile-broadband-basket_1760356423859.csv</code>,
             <code>API_EG.ELC.ACCS.ZS_DS2_en_csv_v2_568.csv</code>
           </div>
