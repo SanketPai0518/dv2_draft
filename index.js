@@ -9,7 +9,7 @@ const IU_OWID_LONG = "data/share-of-individuals-using-the-internet.csv";
 const GDP_FILE     = "data/API_NY.GDP.PCAP.CD_DS2_en_csv_v2_24794.csv";
 const GEOJSON      = "data/countries.geojson";
 const WB_ELEC      = "data/API_EG.ELC.ACCS.ZS_DS2_en_csv_v2_568.csv";
-const POP_FILE     = "data/API_SP.POP.TOTL_DS2_en_csv_v2_23043.csv";  
+const POP_FILE     = "data/API_SP.POP.TOTL_DS2_en_csv_v2_23043.csv";
 
 /* =================== HELPERS =================== */
 const stripBOMCRLF = t => {
@@ -17,18 +17,9 @@ const stripBOMCRLF = t => {
   if (t.charCodeAt(0) === 0xFEFF) t = t.slice(1);
   return t.replace(/\r\n?/g, "\n");
 };
+const safeFetch = async url => { try { const r = await fetch(url); return r.ok ? await r.text() : null; } catch { return null; } };
+const safeFetchJSON = async url => { try { const r = await fetch(url); return r.ok ? await r.json() : null; } catch { return null; } };
 
-const safeFetch = async url => {
-  try { const r = await fetch(url); return r.ok ? await r.text() : null; }
-  catch { return null; }
-};
-
-const safeFetchJSON = async url => {
-  try { const r = await fetch(url); return r.ok ? await r.json() : null; }
-  catch { return null; }
-};
-
-/** Latest record per code for a numeric field (strictly latest year). */
 const latestByCode = (rows, field) => {
   const m = new Map();
   for (const r of rows) {
@@ -38,15 +29,11 @@ const latestByCode = (rows, field) => {
   }
   return m;
 };
-
-/** Latest record at or before a target year with a valid field. */
 const pickLatestAtOrBefore = (arr, code, field, yr) => {
   let best = null;
   for (const r of arr) {
     if (r.code !== code) continue;
-    if (r.year <= yr && Number.isFinite(r[field])) {
-      if (!best || r.year > best.year) best = r;
-    }
+    if (r.year <= yr && Number.isFinite(r[field])) if (!best || r.year > best.year) best = r;
   }
   return best;
 };
@@ -55,15 +42,12 @@ const pickLatestAtOrBefore = (arr, code, field, yr) => {
 async function loadInternetUsersLong(){
   const txt = await safeFetch(IU_OWID_LONG);
   if (!txt) throw new Error(`Missing ${IU_OWID_LONG}`);
-
   const table = d3.csvParse(stripBOMCRLF(txt));
   const norm = s => (s||"").replace(/\u200B/g,"").replace(/[^\p{L}\p{N}]+/gu," ").trim().toLowerCase();
   const colByNorm = new Map(table.columns.map(c => [norm(c), c]));
-
   const codeCol = colByNorm.get("code") || colByNorm.get("country code");
   const yearCol = colByNorm.get("year");
   const nameCol = colByNorm.get("entity") || colByNorm.get("country") || colByNorm.get("country name");
-
   const candidates = [
     "share of individuals using the internet",
     "share-of-individuals-using-the-internet",
@@ -72,59 +56,48 @@ async function loadInternetUsersLong(){
     "value"
   ];
   const valCol = candidates.map(c => colByNorm.get(norm(c))).find(Boolean);
+  if(!(codeCol && yearCol && valCol)) throw new Error("OWID schema mismatch (need Code, Year, Value).");
 
-  if (!(codeCol && yearCol && valCol)) {
-    throw new Error("OWID schema mismatch (need Code, Year, Value).");
-  }
-
-  // Parse, coerce %, and normalise to 0–100 if needed.
   let rows = [];
   for (const rec of table){
     const code = (rec[codeCol]||"").trim().toUpperCase();
     const year = +rec[yearCol];
     const val  = +(String(rec[valCol]).replace(/%/g,"").trim());
-    if (code && Number.isFinite(year) && Number.isFinite(val)){
+    if (code && Number.isFinite(year) && Number.isFinite(val))
       rows.push({ country: nameCol?rec[nameCol]:undefined, code, year, internet: val });
-    }
   }
   if (!rows.length) throw new Error("No internet rows parsed.");
-
   const sample = rows.slice(0, Math.min(400, rows.length));
   const fracShare = sample.reduce((a,d)=> a + (d.internet>0 && d.internet<=1 ? 1:0), 0) / sample.length;
   if (fracShare > 0.6) rows = rows.map(d => ({ ...d, internet: d.internet*100 }));
-
   return rows;
 }
 
 async function loadWBIndicatorCSV(path, fieldName){
   const txt = await safeFetch(path);
   if (!txt) return null;
-
   const lines = stripBOMCRLF(txt).split("\n");
   let headerIdx = 0;
-  for (let i=0;i<Math.min(20,lines.length);i++){
-    if (/^"?Country Name"?,/.test(lines[i])){ headerIdx = i; break; }
-  }
+  for (let i=0;i<Math.min(20,lines.length);i++){ if (/^"?Country Name"?,/.test(lines[i])){ headerIdx = i; break; } }
   const norm = lines.slice(headerIdx).map(l=>l.replace(/\t|;/g, ",")).join("\n");
   const table = d3.csvParse(norm);
-
   const codeCol = table.columns.find(c=>c.trim().toLowerCase()==="country code");
   const nameCol = table.columns.find(c=>c.trim().toLowerCase()==="country name");
-
   const out=[];
   for(const row of table){
     const code=(row[codeCol]||"").trim().toUpperCase();
     for(const k of Object.keys(row)){
       const m=k.match(/^(\d{4})(?:\s*\[YR\1\])?$/);
-      if(!m) continue;
-      const v = row[k]==="" ? NaN : +row[k];
-      if(Number.isFinite(v)) out.push({ code, year:+m[1], [fieldName]:v, country: row[nameCol] });
+      if(m){
+        const v=row[k]===""?NaN:+row[k];
+        if(Number.isFinite(v)) out.push({ code, year:+m[1], [fieldName]:v, country: row[nameCol] });
+      }
     }
   }
   return out.length?out:null;
 }
 
-/* ===== Quick Compare (Country A vs B): Internet %, GDP pc, Gap (Elec − Internet) ===== */
+/* ===== Quick Compare ===== */
 async function renderQuickCompare(){
   const elA = document.getElementById('qcA');
   const elB = document.getElementById('qcB');
@@ -146,7 +119,8 @@ async function renderQuickCompare(){
     .sort((a,b)=>a.name.localeCompare(b.name));
 
   const opts = countries.map(c => `<option value="${c.code}">${c.name}</option>`).join("");
-  elA.innerHTML = opts; elB.innerHTML = opts;
+  elA.innerHTML = opts;
+  elB.innerHTML = opts;
 
   if (countries.length) {
     elA.value = countries[0].code;
@@ -193,14 +167,10 @@ const mapBaseLayers = [
   { data: { url: GEOJSON, format: { type: "json", property: "features" } }, mark: { type: "geoshape", fill: LAND_BASE },
     encoding: { shape: { field: "geometry", type: "geojson" } } }
 ];
-
-const mapOutline = {
-  data: { url: GEOJSON, format: { type: "json", property: "features" } },
+const mapOutline = { data: { url: GEOJSON, format: { type: "json", property: "features" } },
   mark: { type: "geoshape", filled: false, stroke: BORDER, strokeWidth: 0.5 },
-  encoding: { shape: { field: "geometry", type: "geojson" } }
-};
+  encoding: { shape: { field: "geometry", type: "geojson" } } };
 
-// ISO3 extraction once
 const isoTransforms = [
   { calculate:
     "upper((isValid(datum.properties['ISO3166-1-Alpha-3']) ? datum.properties['ISO3166-1-Alpha-3'] : (isValid(datum.properties.ISO_A3) ? datum.properties.ISO_A3 : (isValid(datum.properties.ADM0_A3) ? datum.properties.ADM0_A3 : datum.properties.SOV_A3))))",
@@ -208,7 +178,7 @@ const isoTransforms = [
   { calculate: "replace(datum.iso_raw, ' ', '')", as: "iso3" }
 ];
 
-/* ---- Map: Internet users 2021 (legend ticks + white labels) ---- */
+/* ---- Map: Internet users 2021 ---- */
 const map2021 = {
   $schema: "https://vega.github.io/schema/vega-lite/v5.json",
   width: "container", height: 560, background: null, padding: 0,
@@ -235,7 +205,7 @@ const map2021 = {
             color: {
               field: "Value", type: "quantitative", title: "Internet users (%), 2021",
               scale: { scheme: "blues", domain: [0,100] },
-              legend: { values: [0,20,40,60,80,100] } // numeric tick labels
+              legend: { values: [0,20,40,60,80,100] }
             },
             tooltip: [
               { field: "Entity", title: "Country" },
@@ -250,11 +220,11 @@ const map2021 = {
   config: {
     view: { stroke: null },
     axis: { labelColor:"#dbeafe", titleColor:"#dbeafe", gridColor:"#223a52", domainColor:"#375a7f", tickColor:"#375a7f" },
-    legend: { labelColor:"#fff", titleColor:"#fff" } // ensure white legend text
+    legend: { labelColor:"#fff", titleColor:"#fff" }
   }
 };
 
-/* ---- Map: Electricity − Internet gap (diverging, more ticks, + sign; no +0) ---- */
+/* ---- Map: Electricity − Internet gap ---- */
 function gapMapSpec(values){
   const maxAbs = Math.max(...values.map(d => Math.abs(d.gap)), 40);
   const dom = [-maxAbs, 0, maxAbs];
@@ -275,7 +245,7 @@ function gapMapSpec(values){
             scale:{ domainMid:0, scheme:"redblue", domain:dom },
             legend:{
               values:[-maxAbs, -Math.round(maxAbs/2), 0, Math.round(maxAbs/2), maxAbs],
-              labelExpr: "datum.value === 0 ? '0' : (datum.value > 0 ? '+' + datum.value : datum.value)" // no +0
+              labelExpr: "datum.value === 0 ? '0' : (datum.value > 0 ? '+' + datum.value : datum.value)"
             }
           },
           tooltip:[ {field:"country",title:"Country"}, {field:"iso3",title:"ISO3"}, {field:"gap",title:"Gap (pp)",format:".1f"} ]
@@ -286,7 +256,7 @@ function gapMapSpec(values){
     config:{
       view:{stroke:null},
       axis:{labelColor:"#dbeafe", titleColor:"#dbeafe", gridColor:"#223a52", domainColor:"#375a7f", tickColor:"#375a7f"},
-      legend:{ labelColor:"#fff", titleColor:"#fff" } // white legend text
+      legend:{ labelColor:"#fff", titleColor:"#fff" }
     }
   }
 }
@@ -348,7 +318,7 @@ function prosperitySpec(rows, isLog){
         }
       }
     ],
-    config:{
+  config:{
       view:{ stroke:null },
       axis:{ labelColor:"#dbeafe", titleColor:"#dbeafe", gridColor:"#223a52", domainColor:"#375a7f", tickColor:"#375a7f" }
     }
@@ -387,8 +357,8 @@ function continentSpec(points, isLog){
   };
 }
 
-/* ============ TOP COUNTRIES (facet: Users vs %) — FIXED ============ */
-function topCountriesSpec(rows){
+/* ============ TOP COUNTRIES (facet: Users vs %) — FIXED WIDTHS ============ */
+function topCountriesSpec(rows, cellWidth){
   const enriched = rows.map(r => ({ ...r, total_users: (r.internet/100)*r.population }));
   const byUsers = [...enriched].sort((a,b)=>b.total_users - a.total_users).slice(0,5)
     .map(d => ({ category:"Top 5 by Users", country:d.country, value:d.total_users/1e6, unit:"M" }));
@@ -399,23 +369,19 @@ function topCountriesSpec(rows){
     $schema:"https://vega.github.io/schema/vega-lite/v5.json",
     background:null,
     data:{ values:[...byUsers, ...byPercent] },
-    facet:{ column:{ field:"category", type:"nominal", header:{labelColor:"#fff"} } },
-    // >>> KEY FIX: make each facet use its own x-scale so bars fill the space
-    resolve:{ scale:{ x:"independent" } },
+    facet:{ column:{ field:"category", type:"nominal",
+      header:{ title:null, labelColor:"#fff", labelFontWeight:600 } } },
+    resolve:{ scale:{ x:"independent" } },   // key: separate scales
     spec:{
-      width: "container",
-      height: 520,                           // a bit taller for readability
+      width: Math.max(320, cellWidth),       // numeric width per facet cell
+      height: 520,
       autosize:{ type:"fit", contains:"padding" },
       mark:{ type:"bar", cornerRadiusEnd:4 },
       encoding:{
         x:{ field:"value", type:"quantitative", axis:{grid:false,labelColor:"#dbeafe"}, title:null },
         y:{ field:"country", type:"nominal", sort:"-x", axis:{grid:false,labelColor:"#dbeafe"}, title:null },
         color:{ field:"country", type:"nominal", legend:null },
-        tooltip:[
-          {field:"country"},
-          {field:"value", title:"Value"},
-          {field:"unit", title:"Unit"}
-        ]
+        tooltip:[ {field:"country"}, {field:"value", title:"Value"}, {field:"unit", title:"Unit"} ]
       },
       config:{ view:{stroke:null} }
     }
@@ -448,7 +414,12 @@ async function renderTopCountries(){
         combined.push({ country: u.country || p.country || code, internet: u.internet, population: p.population });
       }
     }
-    await vegaEmbed("#visTopCountries", topCountriesSpec(combined), { actions:false });
+
+    // measure container and compute per-facet width
+    const containerWidth = mount.clientWidth || 960;
+    const cellWidth = Math.floor((containerWidth - 48) / 2); // two facets + some gap
+    await vegaEmbed("#visTopCountries", topCountriesSpec(combined, cellWidth), { actions:false });
+
     msg.textContent = "Top 5 by total users (millions) vs Top 5 by % online — latest year available per series.";
   }catch(e){
     console.error(e);
@@ -461,12 +432,10 @@ async function renderTop10(iu){
   const latest = [...latestByCode(iu, "internet").values()];
   const yr = Math.max(...latest.map(d=>d.year));
   document.getElementById('top10Year').textContent = yr;
-
   const top = latest.filter(d=>d.year===yr).sort((a,b)=>b.internet-a.internet).slice(0,10);
   const rows = top.map((d,i)=>`
     <tr><td>${i+1}</td><td>${d.country||d.code}</td><td style="text-align:right">${d.internet.toFixed(1)}%</td></tr>
   `).join("");
-
   document.getElementById('top10Table').innerHTML = `
     <table style="width:100%; border-collapse:collapse; font-size:14px">
       <thead>
@@ -478,12 +447,9 @@ async function renderTop10(iu){
 
 async function renderMaps(){
   vegaEmbed("#visMap2021", map2021, {actions:false});
-
-  // Build gap = electricity - internet (latest with both)
   const [iu, elec] = await Promise.all([ loadInternetUsersLong(), loadWBIndicatorCSV(WB_ELEC, "elec") ]);
-  const latestIU   = latestByCode(iu, "internet");
+  const latestIU = latestByCode(iu, "internet");
   const latestElec = latestByCode(elec, "elec");
-
   const gapVals = [];
   for(const [code, u] of latestIU){
     const e = latestElec.get(code);
@@ -492,7 +458,6 @@ async function renderMaps(){
     }
   }
   await vegaEmbed("#visGap", gapMapSpec(gapVals), {actions:false});
-
   renderTop10(iu);
 }
 
@@ -503,32 +468,23 @@ async function renderDensity(){
     const iu = await loadInternetUsersLong();
     const years = [...new Set(iu.map(d=>d.year))].sort((a,b)=>b-a);
     yearSel.innerHTML = years.map(y=>`<option value="${y}">${y}</option>`).join("");
-
     const draw = async () => {
       const yr = +yearSel.value || years[0];
       const byCodeYr = new Map();
-
-      for(const r of iu){
-        if (r.year===yr && Number.isFinite(r.internet)) byCodeYr.set(r.code, r.internet);
-      }
-      // If too sparse, backfill with latest ≤ yr for each country
+      for(const r of iu){ if(r.year===yr && Number.isFinite(r.internet)) byCodeYr.set(r.code, r.internet); }
       if(byCodeYr.size < 20){
         const best = new Map();
         for(const r of iu){
-          if (r.year<=yr && Number.isFinite(r.internet)) {
-            const cur=best.get(r.code);
-            if(!cur || r.year>cur.year) best.set(r.code, r);
+          if(r.year<=yr && Number.isFinite(r.internet)){
+            const cur=best.get(r.code); if(!cur || r.year>cur.year) best.set(r.code, r);
           }
         }
-        byCodeYr.clear();
-        for(const [code,rec] of best) byCodeYr.set(code, rec.internet);
+        byCodeYr.clear(); for(const [code,rec] of best) byCodeYr.set(code, rec.internet);
       }
-
       const pcts = [...byCodeYr.values()];
       msg.textContent = `Countries: ${pcts.length}. Kernel density across adoption levels in ${yr}.`;
       await vegaEmbed("#visDensity", densitySpec(pcts), {actions:false});
     };
-
     yearSel.addEventListener('change', draw);
     await draw();
   }catch(e){
@@ -541,12 +497,10 @@ async function renderProsperity(){
   const msg = document.getElementById('prosMsg');
   const yearSel = document.getElementById('prosYear');
   const logChk  = document.getElementById('prosLog');
-
   try{
     const [iu, gdp] = await Promise.all([ loadInternetUsersLong(), loadWBIndicatorCSV(GDP_FILE, "gdp") ]);
     const years = [...new Set(iu.map(d=>d.year))].sort((a,b)=>b-a);
     yearSel.innerHTML = years.map(y=>`<option value="${y}">${y}</option>`).join("");
-
     const draw = async ()=>{
       const yr = +yearSel.value || years[0];
       const rows=[];
@@ -561,7 +515,6 @@ async function renderProsperity(){
       msg.textContent = `Countries: ${rows.length}. Year ≈ ${yr} (latest ≤ year for each series).`;
       await vegaEmbed("#visProsperity", prosperitySpec(rows, logChk.checked), { actions:false });
     };
-
     yearSel.addEventListener('change', draw);
     logChk.addEventListener('change', draw);
     await draw();
@@ -575,30 +528,21 @@ async function renderProsperityByContinent(){
   const msg = document.getElementById('contMsg');
   const yearSel = document.getElementById('contYear');
   const logChk  = document.getElementById('contLog');
-
   try{
-    const [iu, gdp, contMap] = await Promise.all([
-      loadInternetUsersLong(),
-      loadWBIndicatorCSV(GDP_FILE, "gdp"),
-      buildContinentMap()
-    ]);
-
+    const [iu, gdp, contMap] = await Promise.all([ loadInternetUsersLong(), loadWBIndicatorCSV(GDP_FILE, "gdp"), buildContinentMap() ]);
     const years = [...new Set(iu.map(d=>d.year))].sort((a,b)=>b-a);
     yearSel.innerHTML = years.map(y=>`<option value="${y}">${y}</option>`).join("");
-
     const draw = async ()=>{
       const yr = +yearSel.value || years[0];
       const rows=[];
       for(const code of new Set(iu.map(d=>d.code))){
         const iuRec  = pickLatestAtOrBefore(iu,  code, "internet", yr);
         const gdpRec = pickLatestAtOrBefore(gdp||[], code, "gdp",      yr);
-        const cont   = contMap.get(code);
+        const cont = contMap.get(code);
         if(iuRec && gdpRec && gdpRec.gdp>0 && cont){
           rows.push({ continent: cont, code, internet: iuRec.internet, gdp: gdpRec.gdp });
         }
       }
-
-      // Aggregate means per continent
       const byCont = new Map();
       for(const r of rows){
         let g = byCont.get(r.continent);
@@ -612,11 +556,9 @@ async function renderProsperityByContinent(){
         internet_mean: g.internet_sum / g.n,
         gdp_mean: g.gdp_sum / g.n
       }));
-
       msg.textContent = `Continents: ${points.length}. Countries included: ${rows.length}. Year ≈ ${yr} (latest ≤ year per series).`;
       await vegaEmbed("#visContinent", continentSpec(points, logChk.checked), {actions:false});
     };
-
     yearSel.addEventListener('change', draw);
     logChk.addEventListener('change', draw);
     await draw();
@@ -626,57 +568,9 @@ async function renderProsperityByContinent(){
   }
 }
 
-/* ==== Continent map (GeoJSON first, robust fallback) ==== */
+/* ==== Continent map builder ==== */
 async function buildContinentMap(){
-  const fallback = {
-    // AFRICA
-    DZA:"Africa", EGY:"Africa", MAR:"Africa", TUN:"Africa", LBY:"Africa",
-    BFA:"Africa", BEN:"Africa", BWA:"Africa", BDI:"Africa", CMR:"Africa",
-    CPV:"Africa", CAF:"Africa", TCD:"Africa", COM:"Africa", COD:"Africa",
-    COG:"Africa", CIV:"Africa", DJI:"Africa", ERI:"Africa", ETH:"Africa",
-    GNQ:"Africa", GAB:"Africa", GMB:"Africa", GHA:"Africa", GIN:"Africa",
-    GNB:"Africa", KEN:"Africa", LSO:"Africa", LBR:"Africa", MDG:"Africa",
-    MLI:"Africa", MRT:"Africa", MUS:"Africa", MOZ:"Africa", NAM:"Africa",
-    NER:"Africa", NGA:"Africa", RWA:"Africa", STP:"Africa", SEN:"Africa",
-    SYC:"Africa", SLE:"Africa", ZAF:"Africa", SSD:"Africa", SDN:"Africa",
-    SWZ:"Africa", TGO:"Africa", UGA:"Africa", TZA:"Africa", ZMB:"Africa",
-    ZWE:"Africa", SOM:"Africa",
-    // AMERICAS
-    USA:"Americas", CAN:"Americas", MEX:"Americas", GTM:"Americas", BLZ:"Americas",
-    SLV:"Americas", HND:"Americas", NIC:"Americas", CRI:"Americas", PAN:"Americas",
-    CUB:"Americas", DOM:"Americas", HTI:"Americas", JAM:"Americas", TTO:"Americas",
-    BRB:"Americas", BHS:"Americas", ATG:"Americas", GRD:"Americas", DMA:"Americas",
-    KNA:"Americas", VCT:"Americas", LCA:"Americas", GUY:"Americas", SUR:"Americas",
-    VEN:"Americas", COL:"Americas", PER:"Americas", ECU:"Americas", BOL:"Americas",
-    CHL:"Americas", ARG:"Americas", PRY:"Americas", URY:"Americas", BRA:"Americas",
-    // ASIA
-    CHN:"Asia", IND:"Asia", JPN:"Asia", KOR:"Asia", PRK:"Asia", MNG:"Asia",
-    AFG:"Asia", PAK:"Asia", BGD:"Asia", NPL:"Asia", LKA:"Asia", MDV:"Asia",
-    BTN:"Asia", IRN:"Asia", IRQ:"Asia", ISR:"Asia", PSE:"Asia", JOR:"Asia",
-    SAU:"Asia", ARE:"Asia", QAT:"Asia", KWT:"Asia", BHR:"Asia", OMN:"Asia", YEM:"Asia",
-    TUR:"Asia", AZE:"Asia", ARM:"Asia", GEO:"Asia", KAZ:"Asia", KGZ:"Asia",
-    TJK:"Asia", TKM:"Asia", UZB:"Asia", RUS:"Europe",
-    IDN:"Asia", MYS:"Asia", SGP:"Asia", THA:"Asia", VNM:"Asia", LAO:"Asia",
-    KHM:"Asia", MMR:"Asia", PHL:"Asia", BRN:"Asia", TLS:"Asia",
-    // EUROPE
-    ALB:"Europe", AND:"Europe", AUT:"Europe", BLR:"Europe", BEL:"Europe", BIH:"Europe",
-    BGR:"Europe", HRV:"Europe", CZE:"Europe", DNK:"Europe", EST:"Europe", FIN:"Europe",
-    FRA:"Europe", DEU:"Europe", GRC:"Europe", HUN:"Europe", ISL:"Europe", IRL:"Europe",
-    ITA:"Europe", LVA:"Europe", LIE:"Europe", LTU:"Europe", LUX:"Europe", MLT:"Europe",
-    MDA:"Europe", MCO:"Europe", MNE:"Europe", NLD:"Europe", MKD:"Europe", NOR:"Europe",
-    POL:"Europe", PRT:"Europe", ROU:"Europe", SMR:"Europe", SRB:"Europe", SVK:"Europe",
-    SVN:"Europe", ESP:"Europe", SWE:"Europe", CHE:"Europe", UKR:"Europe", GBR:"Europe",
-    VAT:"Europe", GIB:"Europe", IMN:"Europe", FRO:"Europe",
-    // OCEANIA
-    AUS:"Oceania", NZL:"Oceania", PNG:"Oceania", SLB:"Oceania", VUT:"Oceania",
-    FJI:"Oceania", TON:"Oceania", WSM:"Oceania", KIR:"Oceania", TUV:"Oceania",
-    NRU:"Oceania", PLW:"Oceania", MHL:"Oceania", COK:"Oceania", NIU:"Oceania",
-    NCL:"Oceania", PYF:"Oceania", NFK:"Oceania", GUM:"Oceania",
-    // OTHER / TERRITORIES
-    HKG:"Asia", MAC:"Asia", TWN:"Asia", XKX:"Europe", GRL:"Americas",
-    REU:"Africa", MYT:"Africa", ATF:"Africa", SHN:"Africa", ESH:"Africa"
-  };
-
+  const fallback = { DZA:"Africa", EGY:"Africa", MAR:"Africa", TUN:"Africa", LBY:"Africa", BFA:"Africa", BEN:"Africa", BWA:"Africa", BDI:"Africa", CMR:"Africa", CPV:"Africa", CAF:"Africa", TCD:"Africa", COM:"Africa", COD:"Africa", COG:"Africa", CIV:"Africa", DJI:"Africa", ERI:"Africa", ETH:"Africa", GNQ:"Africa", GAB:"Africa", GMB:"Africa", GHA:"Africa", GIN:"Africa", GNB:"Africa", KEN:"Africa", LSO:"Africa", LBR:"Africa", MDG:"Africa", MLI:"Africa", MRT:"Africa", MUS:"Africa", MOZ:"Africa", NAM:"Africa", NER:"Africa", NGA:"Africa", RWA:"Africa", STP:"Africa", SEN:"Africa", SYC:"Africa", SLE:"Africa", ZAF:"Africa", SSD:"Africa", SDN:"Africa", SWZ:"Africa", TGO:"Africa", UGA:"Africa", TZA:"Africa", ZMB:"Africa", ZWE:"Africa", SOM:"Africa", USA:"Americas", CAN:"Americas", MEX:"Americas", GTM:"Americas", BLZ:"Americas", SLV:"Americas", HND:"Americas", NIC:"Americas", CRI:"Americas", PAN:"Americas", CUB:"Americas", DOM:"Americas", HTI:"Americas", JAM:"Americas", TTO:"Americas", BRB:"Americas", BHS:"Americas", ATG:"Americas", GRD:"Americas", DMA:"Americas", KNA:"Americas", VCT:"Americas", LCA:"Americas", GUY:"Americas", SUR:"Americas", VEN:"Americas", COL:"Americas", PER:"Americas", ECU:"Americas", BOL:"Americas", CHL:"Americas", ARG:"Americas", PRY:"Americas", URY:"Americas", BRA:"Americas", CHN:"Asia", IND:"Asia", JPN:"Asia", KOR:"Asia", PRK:"Asia", MNG:"Asia", AFG:"Asia", PAK:"Asia", BGD:"Asia", NPL:"Asia", LKA:"Asia", MDV:"Asia", BTN:"Asia", IRN:"Asia", IRQ:"Asia", ISR:"Asia", PSE:"Asia", JOR:"Asia", SAU:"Asia", ARE:"Asia", QAT:"Asia", KWT:"Asia", BHR:"Asia", OMN:"Asia", YEM:"Asia", TUR:"Asia", AZE:"Asia", ARM:"Asia", GEO:"Asia", KAZ:"Asia", KGZ:"Asia", TJK:"Asia", TKM:"Asia", UZB:"Asia", RUS:"Europe", IDN:"Asia", MYS:"Asia", SGP:"Asia", THA:"Asia", VNM:"Asia", LAO:"Asia", KHM:"Asia", MMR:"Asia", PHL:"Asia", BRN:"Asia", TLS:"Asia", ALB:"Europe", AND:"Europe", AUT:"Europe", BLR:"Europe", BEL:"Europe", BIH:"Europe", BGR:"Europe", HRV:"Europe", CZE:"Europe", DNK:"Europe", EST:"Europe", FIN:"Europe", FRA:"Europe", DEU:"Europe", GRC:"Europe", HUN:"Europe", ISL:"Europe", IRL:"Europe", ITA:"Europe", LVA:"Europe", LIE:"Europe", LTU:"Europe", LUX:"Europe", MLT:"Europe", MDA:"Europe", MCO:"Europe", MNE:"Europe", NLD:"Europe", MKD:"Europe", NOR:"Europe", POL:"Europe", PRT:"Europe", ROU:"Europe", SMR:"Europe", SRB:"Europe", SVK:"Europe", SVN:"Europe", ESP:"Europe", SWE:"Europe", CHE:"Europe", UKR:"Europe", GBR:"Europe", VAT:"Europe", GIB:"Europe", IMN:"Europe", FRO:"Europe", AUS:"Oceania", NZL:"Oceania", PNG:"Oceania", SLB:"Oceania", VUT:"Oceania", FJI:"Oceania", TON:"Oceania", WSM:"Oceania", KIR:"Oceania", TUV:"Oceania", NRU:"Oceania", PLW:"Oceania", MHL:"Oceania", COK:"Oceania", NIU:"Oceania", NCL:"Oceania", PYF:"Oceania", NFK:"Oceania", GUM:"Oceania", HKG:"Asia", MAC:"Asia", TWN:"Asia", XKX:"Europe", GRL:"Americas", REU:"Africa", MYT:"Africa", ATF:"Africa", SHN:"Africa", ESH:"Africa" };
   const map = new Map();
   try{
     const gj = await safeFetchJSON(GEOJSON);
@@ -689,13 +583,12 @@ async function buildContinentMap(){
         if (iso && cont) map.set(iso, cont);
       }
     }
-  }catch(e){ /* ignore, use fallback below */ }
-
+  }catch(e){ /* ignore, use fallback */ }
   for (const [iso, cont] of Object.entries(fallback)) if (!map.has(iso)) map.set(iso, cont);
   return map;
 }
 
-/* ==== Fun-fact mini map (fits container) ==== */
+/* ==== Fun-fact mini map ==== */
 function cablesMiniSpec(){
   const routes = [
     { geo:{ type:"LineString", coordinates:[[-74.0,40.7], [-0.1,51.5]] } },
@@ -726,12 +619,11 @@ function cablesMiniSpec(){
   await renderMaps();
   await renderProsperity();
   await renderProsperityByContinent();
-  await renderTopCountries();   // NEW call
+  await renderTopCountries();
   await renderDensity();
 
   const mini = document.getElementById("visCables");
   if (mini) vegaEmbed("#visCables", cablesMiniSpec(), { actions:false });
 
-  // If Quick Compare panel exists, render it.
   if (document.getElementById('qcA')) renderQuickCompare();
 })();
