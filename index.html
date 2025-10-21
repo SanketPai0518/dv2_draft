@@ -1,669 +1,219 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="no-js" data-theme="dark">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Internet Adoption & Prosperity — Choropleth + Multivariate Explorations</title>
+  <title>Internet Adoption & Prosperity — Interactive Atlas</title>
 
-  <!-- Load libs in this exact order -->
+  <!-- Styles -->
+  <link rel="stylesheet" href="index.css" />
+
+  <!-- Libs (keep order) -->
   <script src="https://cdn.jsdelivr.net/npm/vega@5"></script>
   <script src="https://cdn.jsdelivr.net/npm/vega-lite@5"></script>
   <script src="https://cdn.jsdelivr.net/npm/vega-embed@6"></script>
   <script src="https://cdn.jsdelivr.net/npm/d3-dsv@3"></script>
-
-  <style>
-    :root { --ink:#0f172a; --muted:#64748b; --hair:#e2e8f0; }
-    html,body{ margin:0; background:#fafbff; }
-    body{ font-family: system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif; color:var(--ink); }
-    header{ padding:16px 18px; font-weight:700; }
-    main{ max-width:1100px; margin:0 auto; padding:0 12px 28px; }
-    .viz{ background:#fff; border:1px solid var(--hair); border-radius:12px; padding:12px; margin:18px 0 24px; box-shadow:0 1px 2px rgba(0,0,0,.04); }
-    .caption{ font-size:12px; color:var(--muted); margin:6px 2px 12px; }
-    footer{ max-width:1100px; margin:0 auto 28px; padding:0 12px; font-size:12px; color:#555; }
-    code{ background:#eef2f7; padding:2px 6px; border-radius:6px; }
-    .controls{ font-size:12px; display:flex; align-items:center; gap:18px; margin:6px 0 8px; flex-wrap:wrap; }
-    .controls label{ display:flex; align-items:center; gap:8px; }
-    .pill{ background:#eef2f7; padding:2px 8px; border-radius:999px; font-weight:600; }
-    select, input[type="range"]{ vertical-align:middle; }
-    .warn{ font-size:13px; color:#b91c1c; background:#fee2e2; border:1px solid #fecaca; padding:10px; border-radius:8px; }
-  </style>
 </head>
 <body>
-<header>Internet Adoption & Prosperity — Interactive Visualisations</header>
 
-<main>
-  <!-- ============ VIZ 1: 2021 CHOROPLETH (unchanged) ============ -->
-  <section class="viz">
-    <h3 style="margin:6px 4px 8px;">Choropleth — Internet users (%), 2021</h3>
-    <div id="visMap2021"></div>
-    <div class="caption">
-      Equal-Earth choropleth using <code>data/countries.geojson</code> with ISO3 lookup into <code>data/internet_users_2021.csv</code>.
-      Includes slider filter and on-chart annotation.
+<!-- ===== Top navigation ===== -->
+<header class="topbar">
+  <div class="container wrap">
+    <a class="brand" href="#top" aria-label="Internet Adoption home">
+      <div class="logo" aria-hidden="true"></div>
+      <strong>Internet Adoption & Prosperity</strong>
+    </a>
+    <nav aria-label="Primary">
+      <ul>
+        <li><a href="#summary">Summary</a></li>
+        <li><a href="#maps">Maps</a></li>
+        <li><a href="#prosperity">Prosperity</a></li>
+        <li><a href="#bycontinent">By Continent</a></li>
+        <li><a href="#density">Distribution</a></li>
+        <li><a href="#sources">Sources</a></li>
+      </ul>
+    </nav>
+    <!-- Theme toggle removed -->
+  </div>
+</header>
+
+<!-- ===== Hero ===== -->
+<section class="hero" id="top">
+  <div class="container">
+    <span class="chip">Interactive Atlas</span>
+    <h1>How people get online — and why some still can’t</h1>
+    <p class="sub">
+      Explore how electricity access, affordability, and prosperity align with internet adoption.
+      Built with <strong>Vega-Lite</strong>.
+    </p>
+    <div style="margin-top:12px; display:flex; gap:10px">
+      <a class="btn primary" href="#summary">Start with the summary</a>
+      <a class="btn" href="#maps">Jump to maps</a>
     </div>
-  </section>
+  </div>
+</section>
 
-  <!-- ============ VIZ 2: AFFORDABILITY vs INTERNET % ============ -->
-  <section class="viz">
-    <h3 style="margin:6px 4px 8px;">Is it mostly about affordability?</h3>
-    <div class="controls" id="affordControls" style="display:none;">
-      <label>Year:
-        <select id="affYear"></select>
-      </label>
+<!-- ===== Summary / Key takeaways (year-agnostic) ===== -->
+<section id="summary" class="container section">
+  <div class="card h takeaways">
+    <section class="key-takeaways">
+      <h2>Key takeaways</h2>
+      <ul>
+        <li><strong>Access is widespread but uneven.</strong> Many countries are above ~80–90% internet use, while a persistent group remains far lower — the digital divide hasn’t disappeared, it’s just moved.</li>
+        <li><strong>Infrastructure outpaces connectivity in many places.</strong> The <em>Electricity – Internet</em> map shows electricity access typically exceeds internet use by tens of percentage points. That gap signals room to grow once affordability, coverage, and skills barriers are tackled.</li>
+        <li><strong>Prosperity and connectivity rise together.</strong> Country points follow an S-shaped pattern: big gains in internet use as economies move from low to middle income, with diminishing returns at very high income levels.</li>
+        <li><strong>Continents reflect those gradients.</strong> On average, Europe and Oceania sit highest on both GDP per capita and internet use, the Americas and parts of Asia are in the middle, and Africa trails — highlighting different starting points and policy challenges.</li>
+        <li><strong>Most countries cluster high, but a long tail remains.</strong> The distribution curve is right-heavy (lots of high-adoption countries) with a tail of lower-adoption states that account for much of the remaining global gap.</li>
+      </ul>
+      <p class="tip">
+        <em>Tip:</em> On the maps, darker blues mean higher values; on the diverging map, <em>blue</em> indicates electricity coverage exceeds internet use (positive gap) and <em>orange</em> indicates the reverse.
+      </p>
+    </section>
+  </div>
+</section>
+
+<!-- ===== Main content (sidebar + charts) ===== -->
+<div class="container grid" id="maps">
+  <!-- Sidebar: guide + live top list -->
+  <aside class="side">
+    <div class="card h">
+      <h3 style="margin-top:0">Guide</h3>
+      <ol class="small" style="padding-left:18px; margin:8px 0 0">
+        <li><strong>Maps</strong>: who’s online & where the infrastructure gap is (electricity – internet).</li>
+        <li><strong>Prosperity</strong>: GDP per capita vs internet use (with trend).</li>
+        <li><strong>By continent</strong>: country metrics averaged to continents.</li>
+        <li><strong>Distribution</strong>: density of adoption levels by year.</li>
+      </ol>
+      <p class="small" style="margin-top:10px">Tip: hover for details. Use dropdowns to change years; try log scale.</p>
     </div>
-    <div id="visAfford"></div>
-    <div id="affordMsg" class="caption"></div>
-  </section>
 
-  <!-- ============ VIZ 3: ELECTRICITY ACCESS vs INTERNET % ============ -->
-  <section class="viz">
-    <h3 style="margin:6px 4px 8px;">Electricity as a prerequisite</h3>
-    <div class="controls" id="elecControls" style="display:none;">
-      <label>Year:
-        <select id="elecYear"></select>
-      </label>
+    <div class="card h" style="margin-top:16px">
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:10px">
+        <strong>Top internet adoption <span class="small">(latest %)</span></strong>
+        <span class="chip" id="top10Year">—</span>
+      </div>
+      <div id="top10Table" class="small" style="margin-top:10px">Loading…</div>
     </div>
-    <div id="visElec"></div>
-    <div id="elecMsg" class="caption"></div>
-  </section>
+  </aside>
 
-  <!-- ============ VIZ 4: MOBILE vs FIXED SUBSCRIPTIONS (quadrant) ============ -->
-  <section class="viz">
-    <h3 style="margin:6px 4px 8px;">Paths to connectivity: mobile-led vs fixed-led</h3>
-    <div class="controls" id="subsControls" style="display:none;">
-      <label>Year:
-        <select id="subsYear"></select>
-      </label>
-    </div>
-    <div id="visSubs"></div>
-    <div id="subsMsg" class="caption"></div>
-  </section>
+  <!-- Main charts -->
+  <main>
+    <!-- Map: Internet users 2021 -->
+    <section class="section">
+      <div class="section-title">
+        <h2>Internet users (%), 2021</h2>
+        <span class="small">Equal Earth projection</span>
+      </div>
+      <div class="viz">
+        <div id="visMap2021" aria-label="Choropleth of internet users in 2021"></div>
+        <div class="caption">Drag the legend slider to filter countries by minimum adoption.</div>
+      </div>
+    </section>
 
-  <!-- ============ VIZ 5: YEAR CROSSED 50% ONLINE (threshold map) ============ -->
-  <section class="viz">
-    <h3 style="margin:6px 4px 8px;">Who got online (≥50%) earliest?</h3>
-    <div class="controls" id="thrControls" style="display:none;">
-      <label>Threshold:
-        <select id="thrSel">
-          <option value="50">50%</option>
-          <option value="80">80%</option>
-        </select>
-      </label>
-    </div>
-    <div id="visThreshold"></div>
-    <div id="thrMsg" class="caption"></div>
-  </section>
-</main>
+    <!-- Map: Electricity – Internet gap -->
+    <section class="section">
+      <div class="section-title">
+        <h2>Where electricity outruns the internet (pp, latest available)</h2>
+      </div>
+      <div class="viz">
+        <div id="visGap" aria-label="Gap between electricity access and internet use"></div>
+        <div class="caption">Positive = electricity access exceeds internet use (room to grow). Negative = internet near/exceeds electricity access.</div>
+      </div>
+    </section>
 
-<footer>
-  Required local files in <code>/data/</code>:
-  <code>countries.geojson</code>,
-  <code>internet_users_2021.csv</code>,
-  <code>share-of-individuals-using-the-internet.csv</code>,
-  <code>API_NY.GDP.PCAP.CD_DS2_en_csv_v2_24794.csv</code>,
-  <code>itu_mobile_broadband_price_pct_gni.csv</code>,
-  <code>EG.ELC.ACCS.ZS.csv</code>,
-  <code>IT.CEL.SETS.P2.csv</code>,
-  <code>IT.NET.BBND.P2.csv</code>.
+    <!-- Prosperity vs Internet (country level) -->
+    <section class="section" id="prosperity">
+      <div class="section-title">
+        <h2>Does prosperity track internet use?</h2>
+        <div class="small">GDP per capita (US$) vs Internet users (%). Points are countries; curve is LOESS trend.</div>
+      </div>
+      <div class="viz">
+        <div class="card header" style="padding:10px; margin-bottom:8px">
+          <div class="controls">
+            <label>Year:
+              <select id="prosYear"></select>
+            </label>
+            <label>
+              <input type="checkbox" id="prosLog" checked />
+              Log GDP axis
+            </label>
+          </div>
+        </div>
+        <div id="visProsperity"></div>
+        <div class="caption" id="prosMsg"></div>
+      </div>
+    </section>
+
+    <!-- By Continent -->
+    <section class="section" id="bycontinent">
+      <div class="section-title">
+        <h2>From online to prosperity — by continent</h2>
+        <div class="small">Each dot is a continent’s <em>mean</em> Internet users (%) vs <em>mean</em> GDP per capita.</div>
+      </div>
+      <div class="viz">
+        <div class="card header" style="padding:10px; margin-bottom:8px">
+          <div class="controls">
+            <label>Year:
+              <select id="contYear"></select>
+            </label>
+            <label>
+              <input type="checkbox" id="contLog" checked />
+              Log GDP axis
+            </label>
+          </div>
+        </div>
+        <div id="visContinent"></div>
+        <div class="caption" id="contMsg"></div>
+      </div>
+    </section>
+
+    <!-- Density -->
+    <section class="section" id="density">
+      <div class="section-title">
+        <h2>How is adoption distributed?</h2>
+        <div class="small">Kernel density of country-level internet users (% of population)</div>
+      </div>
+      <div class="viz">
+        <div class="card header" style="padding:10px; margin-bottom:8px">
+          <div class="controls" id="denControls" style="display:flex">
+            <label>Year:
+              <select id="denYear"></select>
+            </label>
+          </div>
+          <div class="small">Translucent area shows share of countries by adoption level.</div>
+        </div>
+        <div id="visDensity"></div>
+        <div id="denMsg" class="caption"></div>
+      </div>
+    </section>
+
+    <!-- Sources -->
+    <section class="section" id="sources">
+      <div class="section-title">
+        <h2>Data & Assets</h2>
+        <div class="small">Place these in <code>/data</code></div>
+      </div>
+      <div class="card h small">
+        <strong>Local files used</strong>:
+        <div style="margin-top:6px">
+          <code>countries.geojson</code>,
+          <code>internet_users_2021.csv</code>,
+          <code>share-of-individuals-using-the-internet.csv</code>,
+          <code>API_NY.GDP.PCAP.CD_DS2_en_csv_v2_24794.csv</code>,
+          <code>data-only-mobile-broadband-basket_1760356423859.csv</code>,
+          <code>API_EG.ELC.ACCS.ZS_DS2_en_csv_v2_568.csv</code>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- ===== Footer ===== -->
+<footer class="container" style="margin:24px 0 80px">
+  <div class="small">Built with Vega-Lite.</div>
 </footer>
 
-<script>
-/* ================= PATHS ================= */
-const IU_2021      = "data/internet_users_2021.csv";
-const IU_OWID_LONG = "data/share-of-individuals-using-the-internet.csv"; // or OWID URL
-const GDP_FILE     = "data/API_NY.GDP.PCAP.CD_DS2_en_csv_v2_24794.csv";
-const GEOJSON      = "data/countries.geojson";
-
-/* Add-on datasets */
-const ITU_MBB_PCTGNI = "data/data-only-mobile-broadband-basket_1760356423859.csv"; 
-const WB_ELEC        = "data/API_EG.ELC.ACCS.ZS_DS2_en_csv_v2_568.csv";
-const WB_MOBILE_SUBS = "data/API_IT.CEL.SETS.P2_DS2_en_csv_v2_6405.csv";
-const WB_FIXED_SUBS  = "data/API_IT.NET.BBND.P2_DS2_en_csv_v2_6412.csv";
-
-
-/* ================= UTILITIES ================= */
-function stripBOMCRLF(t){ if (t && t.charCodeAt(0)===0xFEFF) t=t.slice(1); return t.replace(/\r\n?/g,"\n"); }
-const WB_HEADER_RE = new RegExp(
-  '^\\s*"?Country Name"?\\s*[,;\\t]\\s*"?Country Code"?\\s*[,;\\t]\\s*"?Indicator Name"?\\s*[,;\\t]\\s*"?Indicator Code"?\\s*[,;\\t]',
-  'i'
-);
-
-/* Robust fetch (returns null on 404/failed) */
-async function safeFetch(url){
-  try{
-    const r = await fetch(url);
-    if (!r.ok) return null;
-    return await r.text();
-  }catch(e){ return null; }
-}
-
-/* --- OWID Internet Users long (Entity,Code,Year,Value-ish) --- */
-async function loadInternetUsersLong(){
-  const txt = await safeFetch(IU_OWID_LONG);
-  if (!txt) throw new Error(`Missing ${IU_OWID_LONG}`);
-  const table = d3.csvParse(stripBOMCRLF(txt));
-  const norm = s => (s||"").replace(/\u200B/g,"").replace(/[^\p{L}\p{N}]+/gu," ").trim().toLowerCase();
-  const colByNorm = new Map(table.columns.map(c => [norm(c), c]));
-  const codeCol = colByNorm.get("code") || colByNorm.get("country code");
-  const yearCol = colByNorm.get("year");
-  const nameCol = colByNorm.get("entity") || colByNorm.get("country") || colByNorm.get("country name");
-  const candidates = [
-    "share of individuals using the internet",
-    "share-of-individuals-using-the-internet",
-    "internet users (share of population)",
-    "individuals using the internet % of population",
-    "value"
-  ];
-  let valCol = candidates.map(c=>colByNorm.get(norm(c))).find(Boolean);
-  if(!valCol){
-    const guesses = table.columns.filter(c => {
-      const s = norm(c);
-      return s.includes("internet") && (s.includes("share") || s.includes("%") || s.includes("population"));
-    });
-    valCol = guesses[0];
-  }
-  if(!(codeCol && yearCol && valCol)) throw new Error("OWID schema mismatch (need Code, Year, Value).");
-
-  let rows = [];
-  for (const rec of table){
-    const code = (rec[codeCol]||"").trim().toUpperCase();
-    const year = +rec[yearCol];
-    const raw  = rec[valCol];
-    const val  = +(String(raw).replace(/%/g,"").trim());
-    if (code && Number.isFinite(year) && Number.isFinite(val)) rows.push({ country: nameCol?rec[nameCol]:undefined, code, year, internet: val });
-  }
-  if (!rows.length) throw new Error("No internet rows parsed.");
-  // scale 0–1 → 0–100 if most values look fractional
-  const sample = rows.slice(0, Math.min(500, rows.length));
-  const fracShare = sample.reduce((a, d) => a + (d.internet > 0 && d.internet <= 1 ? 1 : 0), 0) / sample.length;
-  if (fracShare > 0.6) rows = rows.map(d => ({ ...d, internet: d.internet*100 }));
-  return rows;
-}
-
-/* --- World Bank wide CSV (generic) → {code,year,value} --- */
-async function loadWorldBankWideAsLong(url, indicatorCode){
-  const txt = await safeFetch(url);
-  if (!txt) throw new Error(`Missing ${url}`);
-  const lines = stripBOMCRLF(txt).split("\n");
-  let headerIdx = -1;
-  for (let i=0;i<lines.length;i++){ if (WB_HEADER_RE.test(lines[i])){ headerIdx=i; break; } }
-  const normalized = lines.slice(headerIdx<0?0:headerIdx).map(l=>l.replace(/\t|;/g, ",")).join("\n");
-  const table = d3.csvParse(normalized);
-  const codeCol = table.columns.find(c => c.trim().toLowerCase()==="country code");
-  const nameCol = table.columns.find(c => c.trim().toLowerCase()==="country name");
-  const indCol  = table.columns.find(c => c.trim().toLowerCase()==="indicator code");
-  if(!(codeCol && indCol)) throw new Error(`WB file missing columns in ${url}`);
-  const out=[];
-  for(const row of table){
-    if (indicatorCode && (row[indCol]||"").toUpperCase() !== indicatorCode.toUpperCase()) continue;
-    const code = (row[codeCol]||"").trim().toUpperCase();
-    for(const k of Object.keys(row)){
-      const m = k.match(/^(\d{4})(?:\s*\[YR\1\])?$/);
-      if(m){
-        const v = row[k]==="" ? NaN : +row[k];
-        if (Number.isFinite(v)) out.push({ code, year:+m[1], value:v, country: row[nameCol] });
-      }
-    }
-  }
-  if(!out.length) throw new Error(`No numeric year values found in ${url} (${indicatorCode||"any"})`);
-  return out;
-}
-
-/* --- Simple long CSV (Code,Year,Value) like ITU price baskets --- */
-
-async function loadLongCodeYearValue(url){
-  const txt = await safeFetch(url);
-  if (!txt) return null;
-
-  // handle CSVs that sometimes use tabs/semicolons
-  const normText = stripBOMCRLF(txt).replace(/\t|;/g, ",");
-
-  const table = d3.csvParse(normText);
-  const norm = s => (s||"").trim().toLowerCase();
-
-  const H = new Map(table.columns.map(c => [norm(c), c]));
-
-  // ITU/SDMX style columns
-  const codeCol  = H.get("entityiso") || H.get("code") || H.get("country code") || H.get("iso3");
-  const yearCol  = H.get("datayear")  || H.get("year") || H.get("time_period") || H.get("time");
-  const valCol   = H.get("datavalue") || H.get("value") || H.get("obs_value");
-  const seriesCol= H.get("seriesname") || H.get("indicator") || H.get("series");
-
-  if (!(codeCol && yearCol && valCol)) return null;
-
-  // If there are multiple series, keep only the Data-only mobile broadband basket (% GNI)
-  let rowsAll = table;
-  if (seriesCol) {
-    const want = [...new Set(table.map(r => r[seriesCol]))]
-      .find(s => /data[- ]?only.*mobile.*broadband.*(gni|%)/i.test(String(s)));
-    if (want) rowsAll = table.filter(r => r[seriesCol] === want);
-  }
-
-  const out = [];
-  for (const r of rowsAll){
-    const code = String(r[codeCol]||"").trim().toUpperCase();
-    const year = +String(r[yearCol]||"").trim();
-    // strip any % and coerce
-    const value = +String(r[valCol]||"").replace(/%/g,"").trim();
-    if (code && Number.isFinite(year) && Number.isFinite(value)){
-      out.push({ code, year, value });
-    }
-  }
-  return out.length ? out : null;
-}
-
-
-/* --- GDPpc loader (reusing WB wide) --- */
-async function loadGDPpc(){
-  const rows = await loadWorldBankWideAsLong(GDP_FILE, "NY.GDP.PCAP.CD");
-  return rows.map(d => ({ code:d.code, year:d.year, gdp:d.value, country:d.country }));
-}
-
-/* --- Electricity access (WB) --- */
-async function loadElectricity(){
-  // Supports a straight CSV export placed as EG.ELC.ACCS.ZS.csv (WB downloads)
-  const txt = await safeFetch(WB_ELEC);
-  if (!txt) return null;
-  const lines = stripBOMCRLF(txt).split("\n");
-  // Some WB single-indicator CSVs already start with the header; handle both
-  let headerIdx = 0;
-  for (let i=0;i<Math.min(20,lines.length);i++){ if (/^"?Country Name"?,/.test(lines[i])){ headerIdx = i; break; } }
-  const norm = lines.slice(headerIdx).map(l=>l.replace(/\t|;/g, ",")).join("\n");
-  const table = d3.csvParse(norm);
-  const codeCol = table.columns.find(c=>c.trim().toLowerCase()==="country code");
-  const nameCol = table.columns.find(c=>c.trim().toLowerCase()==="country name");
-  const out=[];
-  for(const row of table){
-    const code=(row[codeCol]||"").trim().toUpperCase();
-    for(const k of Object.keys(row)){
-      const m=k.match(/^(\d{4})(?:\s*\[YR\1\])?$/);
-      if(m){
-        const v=row[k]===""?NaN:+row[k];
-        if(Number.isFinite(v)) out.push({ code, year:+m[1], elec:v, country: row[nameCol] });
-      }
-    }
-  }
-  return out.length?out:null;
-}
-
-/* --- Subscriptions (WB) reusing the same pattern --- */
-async function loadWBIndicatorCSV(path, fieldName){
-  const txt = await safeFetch(path);
-  if (!txt) return null;
-  const lines = stripBOMCRLF(txt).split("\n");
-  let headerIdx = 0;
-  for (let i=0;i<Math.min(20,lines.length);i++){ if (/^"?Country Name"?,/.test(lines[i])){ headerIdx = i; break; } }
-  const norm = lines.slice(headerIdx).map(l=>l.replace(/\t|;/g, ",")).join("\n");
-  const table = d3.csvParse(norm);
-  const codeCol = table.columns.find(c=>c.trim().toLowerCase()==="country code");
-  const nameCol = table.columns.find(c=>c.trim().toLowerCase()==="country name");
-  const out=[];
-  for(const row of table){
-    const code=(row[codeCol]||"").trim().toUpperCase();
-    for(const k of Object.keys(row)){
-      const m=k.match(/^(\d{4})(?:\s*\[YR\1\])?$/);
-      if(m){
-        const v=row[k]===""?NaN:+row[k];
-        if(Number.isFinite(v)) out.push({ code, year:+m[1], [fieldName]:v, country: row[nameCol] });
-      }
-    }
-  }
-  return out.length?out:null;
-}
-
-/* --- Region lookup from GeoJSON (best-effort) --- */
-async function buildRegionLookup(){
-  const txt = await safeFetch(GEOJSON);
-  if (!txt) return new Map();
-  const json = JSON.parse(txt);
-  const feats = json.features || [];
-  const L = new Map();
-  for (const f of feats){
-    const p = f.properties || {};
-    const iso = (p["ISO3166-1-Alpha-3"] || p.ISO_A3 || p.ADM0_A3 || p.SOV_A3 || "").toString().toUpperCase().replace(/\s+/g,"");
-    const region = p.WB_REGION || p.REGION_UN || p.SUBREGION || p.REGION_WB || p.CONTINENT || "Other";
-    if (iso && iso!=="-99") L.set(iso, region);
-  }
-  return L;
-}
-
-/* ================= VIZ 1: MAP 2021 (your original, unchanged) ================= */
-const map2021 = {
-  $schema: "https://vega.github.io/schema/vega-lite/v5.json",
-  width: 1000, height: 560, background: "#ffffff", padding: 0,
-  projection: { type: "equalEarth" },
-  params: [{ name: "minPct", value: 0, bind: { input: "range", min: 0, max: 100, step: 5, name: "Show countries with ≥ " } }],
-  layer: [
-    { data: { sphere: true }, mark: { type: "geoshape", fill: "#eaf3ff" } },
-    { data: { graticule: { step: [30,30] } }, mark: { type: "geoshape", stroke: "#bcd0e3", strokeWidth: 0.6, filled: false } },
-    { data: { url: GEOJSON, format: { type: "json", property: "features" } }, mark: { type: "geoshape", fill: "#eef2f7" },
-      encoding: { shape: { field: "geometry", type: "geojson" } } },
-    {
-      data: { url: GEOJSON, format: { type: "json", property: "features" } },
-      transform: [
-        { calculate:
-          "upper((isValid(datum.properties['ISO3166-1-Alpha-3']) ? datum.properties['ISO3166-1-Alpha-3'] : (isValid(datum.properties.ISO_A3) ? datum.properties.ISO_A3 : (isValid(datum.properties.ADM0_A3) ? datum.properties.ADM0_A3 : datum.properties.SOV_A3))))",
-          as: "iso_raw" },
-        { calculate: "replace(datum.iso_raw, ' ', '')", as: "iso3" },
-        { lookup: "iso3", from: { data: { url: IU_2021 }, key: "Code", fields: ["Entity","Value"] } },
-        { calculate: "isValid(datum.Value) && datum.Value >= minPct ? 1 : 0", as: "meets" }
-      ],
-      layer: [
-        { transform: [ { filter: "datum.meets == 0" } ],
-          mark: { type: "geoshape", fill: "#e5e7eb" },
-          encoding: { shape: { field: "geometry", type: "geojson" } } },
-        { transform: [ { filter: "datum.meets == 1" } ],
-          mark: { type: "geoshape" },
-          encoding: {
-            shape: { field: "geometry", type: "geojson" },
-            color: { field: "Value", type: "quantitative", title: "Internet users (%), 2021", scale: { scheme: "blues", domain: [0,100] } },
-            tooltip: [
-              { field: "Entity", title: "Country" },
-              { field: "iso3",   title: "ISO3" },
-              { field: "Value",  title: "% online", format: ".1f" }
-            ]
-          } }
-      ]
-    },
-    { data: { url: GEOJSON, format: { type: "json", property: "features" } }, mark: { type: "geoshape", filled: false, stroke: "#ffffff", strokeWidth: 0.5 },
-      encoding: { shape: { field: "geometry", type: "geojson" } } },
-    { data: { url: IU_2021 },
-      transform: [
-        { filter: "isValid(datum.Value)" },
-        { filter: "datum.Value >= minPct" },
-        { aggregate: [ { op: "count", as: "n" }, { op: "median", field: "Value", as: "med" } ] },
-       // { calculate: "'Countries ≥ ' + minPct + '%: ' + datum.n + ' • median = ' + format(datum.med, '.1f') + '%'", as: "label" }
-      ],
-      layer: [
-        { mark: { type: "text", fontSize: 12, fontWeight: "bold", align: "left", baseline: "top" },
-          encoding: { x: { value: 24 }, y: { value: 24 }, text: { field: "label" }, color: { value: "#0f172a" } } },
-        { mark: { type: "rule", strokeWidth: 2, opacity: 0.6 },
-          encoding: { x: { value: 24 }, x2: { value: 340 }, y: { value: 44 }, color: { value: "#94a3b8" } } }
-      ]
-    }
-  ],
-  config: { view: { stroke: null }, legend: { orient: "right", titleFontWeight: "bold" }, axis: { labelFontSize: 12, titleFontSize: 12 } }
-};
-
-/* ================= VIZ 2: AFFORDABILITY vs INTERNET % ================= */
-function affordSpec(rows, year){
-  return {
-    $schema: "https://vega.github.io/schema/vega-lite/v5.json",
-    width: 1000, height: 520,
-    data: { values: rows },
-    transform: [{ filter: `datum.year == ${year}` }],
-    layer: [
-      { mark: { type: "point", filled: true, opacity: 0.9 },
-        encoding: {
-          x: { field: "afford", type: "quantitative", title: "Mobile broadband price (% of GNI per capita)", scale: { type: "log" } },
-          y: { field: "internet", type: "quantitative", title: "Internet users (% of population)", scale: { domain: [0,100] } },
-          color: { field: "region", type: "nominal", title: "Region" },
-          tooltip: [
-            { field: "country", title: "Country" },
-            { field: "code",    title: "ISO3" },
-            { field: "afford",  title: "Price (% GNI)", format: ".2f" },
-            { field: "internet",title: "Internet (%)", format: ".1f" }
-          ]
-        } },
-      { transform: [{ loess: "internet", on: "afford", bandwidth: 0.6 }],
-        mark: { type: "line", size: 3, opacity: 0.8 },
-        encoding: { x: { field: "afford", type: "quantitative", scale: { type: "log" } }, y: { field: "internet", type: "quantitative" } }
-      }
-    ],
-    config: { view: { stroke: null }, background: "#ffffff", axis: { grid: true, gridColor: "#eef2f7" } }
-  };
-}
-
-/* ================= VIZ 3: ELECTRICITY vs INTERNET % ================= */
-function elecSpec(rows, year){
-  return {
-    $schema: "https://vega.github.io/schema/vega-lite/v5.json",
-    width: 1000, height: 520,
-    data: { values: rows },
-    transform: [{ filter: `datum.year == ${year}` }],
-    layer: [
-      { mark: { type: "point", filled: true, opacity: 0.9 },
-        encoding: {
-          x: { field: "elec", type: "quantitative", title: "Access to electricity (% of population)", scale: { domain: [0,100] } },
-          y: { field: "internet", type: "quantitative", title: "Internet users (% of population)", scale: { domain: [0,100] } },
-          color: { field: "region", type: "nominal", title: "Region" },
-          tooltip: [
-            { field: "country", title: "Country" },
-            { field: "code",    title: "ISO3" },
-            { field: "elec",    title: "Electricity (%)", format: ".1f" },
-            { field: "internet",title: "Internet (%)", format: ".1f" }
-          ]
-        } },
-      { transform: [{ loess: "internet", on: "elec", bandwidth: 0.6 }],
-        mark: { type: "line", size: 3, opacity: 0.8 },
-        encoding: { x: { field: "elec", type: "quantitative" }, y: { field: "internet", type: "quantitative" } }
-      }
-    ],
-    config: { view: { stroke: null }, background: "#ffffff", axis: { grid: true, gridColor: "#eef2f7" } }
-  };
-}
-
-/* ================= VIZ 4: MOBILE vs FIXED SUBSCRIPTIONS (quadrant) ================= */
-function subsSpec(rows, year){
-  return {
-    $schema: "https://vega.github.io/schema/vega-lite/v5.json",
-    width: 1000, height: 520,
-    data: { values: rows },
-    transform: [{ filter: `datum.year == ${year}` }],
-    layer: [
-      { mark: { type: "point", filled: true, opacity: 0.9 },
-        encoding: {
-          x: { field: "mobile", type: "quantitative", title: "Mobile subscriptions (per 100 people)" },
-          y: { field: "fixed",  type: "quantitative", title: "Fixed broadband (per 100 people)" },
-          color: { field: "region", type: "nominal", title: "Region" },
-          size:  { field: "internet", type: "quantitative", title: "Internet (%)", scale: { range: [40, 600] } },
-          tooltip: [
-            { field: "country",  title: "Country" },
-            { field: "code",     title: "ISO3" },
-            { field: "mobile",   title: "Mobile /100", format: ".1f" },
-            { field: "fixed",    title: "Fixed /100",  format: ".1f" },
-            { field: "internet", title: "Internet (%)", format: ".1f" }
-          ]
-        } },
-      { mark: { type: "rule", strokeDash: [4,4], opacity: 0.6 }, encoding: { x: { aggregate: "median", field: "mobile", type: "quantitative" } } },
-      { mark: { type: "rule", strokeDash: [4,4], opacity: 0.6 }, encoding: { y: { aggregate: "median", field: "fixed", type: "quantitative" } } }
-    ],
-    config: { view: { stroke: null }, background: "#ffffff", axis: { grid: true, gridColor: "#eef2f7" } }
-  };
-}
-
-/* ================= VIZ 5: YEAR REACHED THRESHOLD (MAP) ================= */
-function percentMapSpec(values){  // values: [{code, country, pct}]
-  return {
-    $schema: "https://vega.github.io/schema/vega-lite/v5.json",
-    width: 1000, height: 560, background: "#ffffff", padding: 0,
-    projection: { type: "equalEarth" },
-    layer: [
-      { data: { sphere: true }, mark: { type: "geoshape", fill: "#eaf3ff" } },
-      { data: { graticule: { step: [30,30] } }, mark: { type: "geoshape", stroke: "#bcd0e3", strokeWidth: 0.6, filled: false } },
-      {
-        data: { url: GEOJSON, format: { type: "json", property: "features" } },
-        transform: [
-          { calculate: "upper((isValid(datum.properties['ISO3166-1-Alpha-3']) ? datum.properties['ISO3166-1-Alpha-3'] : (isValid(datum.properties.ISO_A3) ? datum.properties.ISO_A3 : (isValid(datum.properties.ADM0_A3) ? datum.properties.ADM0_A3 : datum.properties.SOV_A3))))", as: "iso_raw" },
-          { calculate: "replace(datum.iso_raw, ' ', '')", as: "iso3" },
-          { lookup: "iso3", from: { data: { values }, key: "code", fields: ["pct","country"] } }
-        ],
-        mark: { type: "geoshape" },
-        encoding: {
-          shape: { field: "geometry", type: "geojson" },
-          color: {
-            field: "pct", type: "quantitative",
-            title: "Internet users (% of population, most recent)",
-            scale: { scheme: "blues", domain: [0,100], unknown: "#e5e7eb" } // <-- fill missing with grey
-          },
-          tooltip: [
-            { field: "country", title: "Country" },
-            { field: "iso3",    title: "ISO3" },
-            { field: "pct",     title: "Internet (%)", format: ".1f" }
-          ]
-        }
-      },
-      { data: { url: GEOJSON, format: { type: "json", property: "features" } },
-        mark: { type: "geoshape", filled: false, stroke: "#ffffff", strokeWidth: 0.5 },
-        encoding: { shape: { field: "geometry", type: "geojson" } } }
-    ],
-    config: { view: { stroke: null }, legend: { orient: "right", titleFontWeight: "bold" } }
-  };
-}
-
-/* ================= RENDERERS ================= */
-vegaEmbed("#visMap2021", map2021, { actions:false });
-
-async function renderAffordability(){
-  const msg = document.getElementById('affordMsg');
-  const ctrl = document.getElementById('affordControls');
-  const yearSel = document.getElementById('affYear');
-
-  try{
-    const [iu, mbb, gdp, regionLUT] = await Promise.all([
-      loadInternetUsersLong(),
-      loadLongCodeYearValue(ITU_MBB_PCTGNI),
-      loadGDPpc(),
-      buildRegionLookup()
-    ]);
-    if (!mbb) { msg.innerHTML = `<div class="warn">Affordability data not found (${ITU_MBB_PCTGNI}).</div>`; return; }
-
-    // join by (code, year)
-    const iuMap = new Map(iu.map(d => [`${d.code}|${d.year}`, d]));
-    const rows=[];
-    for (const m of mbb){
-      const k = `${m.code}|${m.year}`;
-      const i = iuMap.get(k);
-      if (i){
-        rows.push({ code:m.code, year:m.year, afford:m.value, internet:i.internet, country:i.country, region: regionLUT.get(m.code)||"Other" });
-      }
-    }
-    if (!rows.length){ msg.innerHTML = `<div class="warn">No overlap between affordability and internet series.</div>`; return; }
-
-    const years = [...new Set(rows.map(d=>d.year))].sort((a,b)=>b-a);
-    yearSel.innerHTML = years.map(y=>`<option value="${y}">${y}</option>`).join("");
-    ctrl.style.display = "";
-
-    const render = async () => {
-      const year = +yearSel.value || years[0];
-      msg.textContent = `Mobile broadband price as % of GNI vs Internet %, ${year}. Lower price should correlate with higher adoption.`;
-      await vegaEmbed("#visAfford", affordSpec(rows, year), { actions:false });
-    };
-    yearSel.addEventListener('change', render);
-    await render();
-  }catch(e){
-    console.error(e);
-    msg.innerHTML = `<div class="warn">Affordability error: ${e.message.replace(/</g,"&lt;")}</div>`;
-  }
-}
-
-async function renderElectricity(){
-  const msg = document.getElementById('elecMsg');
-  const ctrl = document.getElementById('elecControls');
-  const yearSel = document.getElementById('elecYear');
-  try{
-    const [iu, elec, regionLUT] = await Promise.all([ loadInternetUsersLong(), loadElectricity(), buildRegionLookup() ]);
-    if (!elec) { msg.innerHTML = `<div class="warn">Electricity data not found (${WB_ELEC}).</div>`; return; }
-    const iuMap = new Map(iu.map(d => [`${d.code}|${d.year}`, d]));
-    const rows=[];
-    for (const e of elec){
-      const k = `${e.code}|${e.year}`;
-      const i = iuMap.get(k);
-      if (i){
-        rows.push({ code:e.code, year:e.year, elec:e.elec, internet:i.internet, country:i.country, region: regionLUT.get(e.code)||"Other" });
-      }
-    }
-    if (!rows.length){ msg.innerHTML = `<div class="warn">No overlap between electricity and internet series.</div>`; return; }
-    const years = [...new Set(rows.map(d=>d.year))].sort((a,b)=>b-a);
-    yearSel.innerHTML = years.map(y=>`<option value="${y}">${y}</option>`).join("");
-    ctrl.style.display = "";
-    const render = async () => {
-      const year = +yearSel.value || years[0];
-      msg.textContent = `Access to electricity vs Internet %, ${year}. Countries in bottom-left may face basic infrastructure barriers.`;
-      await vegaEmbed("#visElec", elecSpec(rows, year), { actions:false });
-    };
-    yearSel.addEventListener('change', render);
-    await render();
-  }catch(e){
-    console.error(e);
-    msg.innerHTML = `<div class="warn">Electricity viz error: ${e.message.replace(/</g,"&lt;")}</div>`;
-  }
-}
-
-async function renderSubscriptions(){
-  const msg = document.getElementById('subsMsg');
-  const ctrl = document.getElementById('subsControls');
-  const yearSel = document.getElementById('subsYear');
-  try{
-    const [iu, mobile, fixed, regionLUT] = await Promise.all([
-      loadInternetUsersLong(),
-      loadWBIndicatorCSV(WB_MOBILE_SUBS, "mobile"),
-      loadWBIndicatorCSV(WB_FIXED_SUBS, "fixed"),
-      buildRegionLookup()
-    ]);
-    if (!(mobile && fixed)) { msg.innerHTML = `<div class="warn">Subscription datasets missing (${WB_MOBILE_SUBS} / ${WB_FIXED_SUBS}).</div>`; return; }
-
-    // join triple on (code,year)
-    const key = (c,y)=>`${c}|${y}`;
-    const mMap = new Map(mobile.map(d=>[key(d.code,d.year), d]));
-    const fMap = new Map(fixed.map(d=>[key(d.code,d.year), d]));
-    const iuMap= new Map(iu.map(d=>[key(d.code,d.year), d]));
-    const rows=[];
-    for (const k of mMap.keys()){
-      const m=mMap.get(k), f=fMap.get(k), i=iuMap.get(k);
-      if (m && f && i){
-        rows.push({ code:m.code, year:m.year, mobile:m.mobile, fixed:f.fixed, internet:i.internet, country:i.country, region: regionLUT.get(m.code)||"Other" });
-      }
-    }
-    if (!rows.length){ msg.innerHTML = `<div class="warn">No overlapping rows for mobile/fixed/internet.</div>`; return; }
-    const years = [...new Set(rows.map(d=>d.year))].sort((a,b)=>b-a);
-    yearSel.innerHTML = years.map(y=>`<option value="${y}">${y}</option>`).join("");
-    ctrl.style.display = "";
-    const render = async () => {
-      const year = +yearSel.value || years[0];
-      msg.textContent = `Mobile-led (right/low top) vs Fixed-led (top/left) access paths, ${year}. Bubble size encodes Internet %.`;
-      await vegaEmbed("#visSubs", subsSpec(rows, year), { actions:false });
-    };
-    yearSel.addEventListener('change', render);
-    await render();
-  }catch(e){
-    console.error(e);
-    msg.innerHTML = `<div class="warn">Subscriptions viz error: ${e.message.replace(/</g,"&lt;")}</div>`;
-  }
-}
-
-
-
-async function renderThreshold(){  // repurposed to heatmap of latest %
-  const msg = document.getElementById('thrMsg');
-  const ctrl = document.getElementById('thrControls'); // we'll hide it
-  try{
-    const iu = await loadInternetUsersLong();
-
-    // most recent % per country
-    const latestByCode = new Map();
-    for (const r of iu){
-      const cur = latestByCode.get(r.code);
-      if (!cur || r.year > cur.year) latestByCode.set(r.code, r);
-    }
-    const values = [...latestByCode.values()].map(d => ({
-      code: d.code, country: d.country, pct: d.internet
-    }));
-
-    ctrl.style.display = "none"; // no threshold control anymore
-    msg.textContent = "Most recent internet adoption (% of population). Grey = no data.";
-    await vegaEmbed("#visThreshold", percentMapSpec(values), { actions:false });
-  }catch(e){
-    console.error(e);
-    msg.innerHTML = `<div class="warn">Heatmap error: ${e.message.replace(/</g,"&lt;")}</div>`;
-  }
-}
-
-
-/* ================= BOOT ================= */
-renderAffordability();
-renderElectricity();
-renderSubscriptions();
-renderThreshold();
-</script>
+<!-- App -->
+<script src="index.js"></script>
 </body>
 </html>

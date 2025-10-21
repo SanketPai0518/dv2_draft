@@ -1,0 +1,101 @@
+:root{
+    /* Theme */
+    --page:#0b1020; --ink:#e5e7eb; --ink-2:#cbd5e1; --muted:#94a3b8;
+    --hair:#1f2937; --card:#0f172a; --accent:#60a5fa; --accent-2:#93c5fd;
+    --shadow:0 1px 2px rgba(0,0,0,.25), 0 10px 28px rgba(0,0,0,.35);
+  
+    /* Layout: sidebar + gap define where the main column begins */
+    --grid-sidebar: 280px;
+    --grid-gap: 20px;
+    --main-offset: calc(var(--grid-sidebar) + var(--grid-gap));
+  }
+  
+  html, body { height:100%; overflow-x:hidden; }
+  
+  body{
+    margin:0;
+    font:16px/1.55 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+    color:var(--ink);
+    background:linear-gradient(180deg, var(--page) 0, #0b1020 0, #0f172a 320px), #0f172a;
+  }
+  
+  /* Frame */
+  .container{ max-width:1000px; margin:0 auto; padding:0 12px; }
+  
+  .topbar{
+    position:sticky; top:0; z-index:50;
+    backdrop-filter:saturate(1.2) blur(8px);
+    background:color-mix(in oklab, var(--card), transparent 10%);
+    border-bottom:1px solid var(--hair);
+  }
+  .topbar .wrap{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 0; }
+  
+  .brand{ display:flex; align-items:center; gap:12px; color:var(--ink); text-decoration:none; }
+  .logo{
+    width:28px; height:28px; border-radius:8px;
+    background: conic-gradient(from 180deg at 50% 50%, #60a5fa, #34d399, #f59e0b, #60a5fa);
+    box-shadow: inset 0 0 0 4px rgba(255,255,255,.15);
+  }
+  
+  nav ul{ display:flex; gap:16px; padding:0; margin:0; list-style:none; }
+  nav a{ color:var(--ink); text-decoration:none; font-weight:600; opacity:.9; }
+  nav a:hover{ opacity:1; }
+  
+  .btn{
+    display:inline-flex; align-items:center; gap:8px; padding:8px 12px;
+    border-radius:12px; border:1px solid var(--hair);
+    background:#0b1324; color:var(--ink); box-shadow:var(--shadow); text-decoration:none; font-weight:600;
+  }
+  .btn.small{ padding:6px 10px; font-size:14px; }
+  .btn.primary{ background:var(--accent); color:#0b1020; border-color:transparent; }
+  
+  .hero{ position:relative; padding:48px 0 24px; color:#fff; }
+  .hero h1{ margin:0 0 10px; font-size: clamp(28px, 2.8vw, 44px); line-height:1.1; }
+  .sub{ max-width:800px; color:#dbeafe; }
+  .chip{ display:inline-block; padding:4px 10px; border-radius:999px; background:#0c1a2a; color:#cbd5e1; font-weight:600; font-size:12px; margin-right:8px; }
+  
+  /* Grid: sidebar + main */
+  .grid{ display:grid; grid-template-columns: var(--grid-sidebar) 1fr; gap:var(--grid-gap); }
+  @media (max-width:1000px){ .grid{ grid-template-columns:1fr; } .side{ order:2; } }
+  .side{ position:sticky; top:84px; align-self:start; }
+  
+  /* Cards & viz shells */
+  .card{ background:var(--card); border:1px solid var(--hair); border-radius:16px; box-shadow:var(--shadow); }
+  .card.h{ padding:16px; }
+  
+  .viz{ background:var(--card); border:1px solid var(--hair); border-radius:16px; padding:12px; box-shadow:var(--shadow); }
+  .viz + .viz{ margin-top:18px; }
+  .viz h3{ margin:6px 6px 4px 4px; }
+  .caption{ font-size:13px; color:var(--muted); margin:6px 2px 8px; }
+  
+  .controls{ font-size:13px; display:flex; align-items:center; gap:14px; margin:6px 0 8px; flex-wrap:wrap; }
+  .controls label{ display:flex; align-items:center; gap:8px; }
+  select, input[type="checkbox"]{ accent-color:#60a5fa; }
+  select{ background:#0b1324; color:var(--ink); border:1px solid var(--hair); border-radius:10px; padding:8px 10px; }
+  
+  .section{ margin:24px 0; }
+  .section-title{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin:0 0 10px; }
+  .section-title h2{ font-size: clamp(18px, 1.6vw, 24px); margin:0; }
+  .small{ font-size:13px; color:var(--muted); }
+  .warn{ font-size:13px; color:#fecaca; background:#3f1f1f; border:1px solid #7f1d1d; padding:10px; border-radius:8px; }
+
+  .takeaways{
+    margin:20px 0 0 700px;     /* align left edge with main column */
+    width: calc(100% - var(--main-offset)); /* span exactly the main column width */
+  }
+  .key-takeaways h2{ text-align:center; margin:0 0 10px; }
+  .key-takeaways ul{ margin:10px 0 12px; padding-left:18px; }
+  .key-takeaways li{ margin:8px 0; line-height:1.6; }
+  .key-takeaways .tip{ text-align:center; color:#9ca3af; }
+  
+  @media (max-width:1000px){
+    .takeaways{ margin:16px auto; width:100%; }
+  }
+  
+  /* Charts scale with their container; no horizontal scroll */
+  #visMap2021, #visGap, #visProsperity, #visContinent, #visDensity { width:100%; }
+  .viz > div{ max-width:100%; }
+  
+  /* Hide vega action buttons, if any */
+  .vega-actions{ display:none !important; }
+  
