@@ -8,7 +8,7 @@
   <!-- Styles -->
   <link rel="stylesheet" href="index.css" />
 
-  <!-- Libs (keep order) -->
+  <!-- Libraries -->
   <script src="https://cdn.jsdelivr.net/npm/vega@5"></script>
   <script src="https://cdn.jsdelivr.net/npm/vega-lite@5"></script>
   <script src="https://cdn.jsdelivr.net/npm/vega-embed@6"></script>
@@ -16,7 +16,6 @@
 </head>
 <body>
 
-<!-- ===== Top navigation ===== -->
 <header class="topbar">
   <div class="container wrap">
     <a class="brand" href="#top" aria-label="Internet Adoption home">
@@ -33,11 +32,9 @@
         <li><a href="#sources">Sources</a></li>
       </ul>
     </nav>
-    <!-- Theme toggle removed -->
   </div>
 </header>
 
-<!-- ===== Hero ===== -->
 <section class="hero" id="top">
   <div class="container">
     <span class="chip">Interactive Atlas</span>
@@ -53,35 +50,31 @@
   </div>
 </section>
 
-<!-- ===== Summary / Key takeaways (year-agnostic) ===== -->
 <section id="summary" class="container section">
   <div class="card h takeaways">
     <section class="key-takeaways">
       <h2>Key takeaways</h2>
       <ul>
         <li><strong>Access is widespread but uneven.</strong> Many countries are above ~80–90% internet use, while a persistent group remains far lower — the digital divide hasn’t disappeared, it’s just moved.</li>
-        <li><strong>Infrastructure outpaces connectivity in many places.</strong> The <em>Electricity – Internet</em> map shows electricity access typically exceeds internet use by tens of percentage points. That gap signals room to grow once affordability, coverage, and skills barriers are tackled.</li>
-        <li><strong>Prosperity and connectivity rise together.</strong> Country points follow an S-shaped pattern: big gains in internet use as economies move from low to middle income, with diminishing returns at very high income levels.</li>
-        <li><strong>Continents reflect those gradients.</strong> On average, Europe and Oceania sit highest on both GDP per capita and internet use, the Americas and parts of Asia are in the middle, and Africa trails — highlighting different starting points and policy challenges.</li>
-        <li><strong>Most countries cluster high, but a long tail remains.</strong> The distribution curve is right-heavy (lots of high-adoption countries) with a tail of lower-adoption states that account for much of the remaining global gap.</li>
+        <li><strong>Infrastructure outpaces connectivity in many places.</strong> The <em>Electricity – Internet</em> map shows electricity access typically exceeds internet use by tens of percentage points.</li>
+        <li><strong>Prosperity and connectivity rise together.</strong> Economies see steep adoption as they move from low to middle income, with slower gains at high levels.</li>
+        <li><strong>Continents reflect those gradients.</strong> Europe and Oceania lead; the Americas and Asia vary; Africa trails — highlighting policy challenges.</li>
+        <li><strong>A long tail remains.</strong> The distribution curve skews high but a handful of low-adoption states account for the remaining global gap.</li>
       </ul>
-      <p class="tip">
-        <em>Tip:</em> On the maps, darker blues mean higher values; on the diverging map, <em>blue</em> indicates electricity coverage exceeds internet use (positive gap) and <em>orange</em> indicates the reverse.
-      </p>
+      <p class="tip"><em>Tip:</em> On maps, darker blues mean higher values; blue = electricity exceeds internet use; orange = the reverse.</p>
     </section>
   </div>
 </section>
 
-<!-- ===== Main content (sidebar + charts) ===== -->
 <div class="container grid" id="maps">
-  <!-- Sidebar: guide + live top list -->
+  <!-- Sidebar -->
   <aside class="side">
     <div class="card h">
       <h3 style="margin-top:0">Guide</h3>
       <ol class="small" style="padding-left:18px; margin:8px 0 0">
-        <li><strong>Maps</strong>: who’s online & where the infrastructure gap is (electricity – internet).</li>
+        <li><strong>Maps</strong>: who’s online & where infrastructure gaps remain.</li>
         <li><strong>Prosperity</strong>: GDP per capita vs internet use (with trend).</li>
-        <li><strong>By continent</strong>: country metrics averaged to continents.</li>
+        <li><strong>By continent</strong>: regional means for GDP & connectivity.</li>
         <li><strong>Distribution</strong>: density of adoption levels by year.</li>
       </ol>
       <p class="small" style="margin-top:10px">Tip: hover for details. Use dropdowns to change years; try log scale.</p>
@@ -96,124 +89,139 @@
     </div>
   </aside>
 
-  <!-- Main charts -->
-  <main>
-    <!-- Map: Internet users 2021 -->
-    <section class="section">
-      <div class="section-title">
-        <h2>Internet users (%), 2021</h2>
-        <span class="small">Equal Earth projection</span>
-      </div>
-      <div class="viz">
-        <div id="visMap2021" aria-label="Choropleth of internet users in 2021"></div>
-        <div class="caption">Drag the legend slider to filter countries by minimum adoption.</div>
-      </div>
-    </section>
+  <!-- Main column + fun fact rail -->
+  <main class="main-with-fact">
+    <div class="main-col">
+      <!-- Internet users 2021 -->
+      <section class="section">
+        <div class="section-title">
+          <h2>Internet users (%), 2021</h2>
+          <span class="small">Equal Earth projection</span>
+        </div>
+        <div class="viz">
+          <div id="visMap2021" aria-label="Choropleth of internet users in 2021"></div>
+          <div class="caption">Drag the slider to filter countries by minimum adoption.</div>
+        </div>
+      </section>
 
-    <!-- Map: Electricity – Internet gap -->
-    <section class="section">
-      <div class="section-title">
-        <h2>Where electricity outruns the internet (pp, latest available)</h2>
-      </div>
-      <div class="viz">
-        <div id="visGap" aria-label="Gap between electricity access and internet use"></div>
-        <div class="caption">Positive = electricity access exceeds internet use (room to grow). Negative = internet near/exceeds electricity access.</div>
-      </div>
-    </section>
+      <!-- Electricity vs Internet -->
+      <section class="section">
+        <div class="section-title"><h2>Where electricity outruns the internet (pp)</h2></div>
+        <div class="viz">
+          <div id="visGap" aria-label="Gap between electricity access and internet use"></div>
+          <div class="caption">Positive = electricity exceeds internet use. Negative = internet near or above electricity access.</div>
+        </div>
+      </section>
 
-    <!-- Prosperity vs Internet (country level) -->
-    <section class="section" id="prosperity">
-      <div class="section-title">
-        <h2>Does prosperity track internet use?</h2>
-        <div class="small">GDP per capita (US$) vs Internet users (%). Points are countries; curve is LOESS trend.</div>
-      </div>
-      <div class="viz">
-        <div class="card header" style="padding:10px; margin-bottom:8px">
-          <div class="controls">
-            <label>Year:
-              <select id="prosYear"></select>
-            </label>
-            <label>
-              <input type="checkbox" id="prosLog" checked />
-              Log GDP axis
-            </label>
+      <!-- Prosperity -->
+      <section class="section" id="prosperity">
+        <div class="section-title">
+          <h2>Does prosperity track internet use?</h2>
+          <div class="small">GDP per capita (US$) vs Internet users (%). Points are countries; curve is LOESS trend.</div>
+        </div>
+        <div class="viz">
+          <div class="card header" style="padding:10px; margin-bottom:8px">
+            <div class="controls">
+              <label>Year: <select id="prosYear"></select></label>
+              <label><input type="checkbox" id="prosLog" checked /> Log GDP axis</label>
+            </div>
+          </div>
+          <div id="visProsperity"></div>
+          <div class="caption" id="prosMsg"></div>
+        </div>
+      </section>
+
+      <!-- By continent -->
+      <section class="section" id="bycontinent">
+        <div class="section-title">
+          <h2>From online to prosperity — by continent</h2>
+          <div class="small">Each dot = a continent’s mean internet users (%) vs mean GDP per capita.</div>
+        </div>
+        <div class="viz">
+          <div class="card header" style="padding:10px; margin-bottom:8px">
+            <div class="controls">
+              <label>Year: <select id="contYear"></select></label>
+              <label><input type="checkbox" id="contLog" checked /> Log GDP axis</label>
+            </div>
+          </div>
+          <div id="visContinent"></div>
+          <div class="caption" id="contMsg"></div>
+        </div>
+      </section>
+
+      <!-- Density -->
+      <section class="section" id="density">
+        <div class="section-title">
+          <h2>How is adoption distributed?</h2>
+          <div class="small">Kernel density of country-level internet users (% of population)</div>
+        </div>
+        <div class="viz">
+          <div class="card header" style="padding:10px; margin-bottom:8px">
+            <div class="controls" id="denControls" style="display:flex">
+              <label>Year: <select id="denYear"></select></label>
+            </div>
+            <div class="small">Translucent area shows share of countries by adoption level.</div>
+          </div>
+          <div id="visDensity"></div>
+          <div id="denMsg" class="caption"></div>
+        </div>
+      </section>
+
+      <!-- Sources -->
+      <section class="section" id="sources">
+        <div class="section-title"><h2>Data & Assets</h2></div>
+        <div class="card h small">
+          <strong>Local files used</strong>:
+          <div style="margin-top:6px">
+            <code>countries.geojson</code>,
+            <code>internet_users_2021.csv</code>,
+            <code>share-of-individuals-using-the-internet.csv</code>,
+            <code>API_NY.GDP.PCAP.CD_DS2_en_csv_v2_24794.csv</code>,
+            <code>data-only-mobile-broadband-basket_1760356423859.csv</code>,
+            <code>API_EG.ELC.ACCS.ZS_DS2_en_csv_v2_568.csv</code>
           </div>
         </div>
-        <div id="visProsperity"></div>
-        <div class="caption" id="prosMsg"></div>
-      </div>
-    </section>
+      </section>
+    </div>
 
-    <!-- By Continent -->
-    <section class="section" id="bycontinent">
-      <div class="section-title">
-        <h2>From online to prosperity — by continent</h2>
-        <div class="small">Each dot is a continent’s <em>mean</em> Internet users (%) vs <em>mean</em> GDP per capita.</div>
+    <!-- Right rail -->
+    <aside class="fact-col">
+      <div class="card h fun-fact">
+        <div class="eyebrow">Fun fact!</div>
+        <p class="small">
+          The internet’s hidden highways are <em>undersea cables</em> — over a million kilometres
+          of fibre-optic lines circling the planet several times.
+        </p>
+        <div id="visCables" aria-label="Illustrative submarine cable routes"></div>
+        <div class="caption">Illustrative routes only.</div>
       </div>
-      <div class="viz">
-        <div class="card header" style="padding:10px; margin-bottom:8px">
-          <div class="controls">
-            <label>Year:
-              <select id="contYear"></select>
-            </label>
-            <label>
-              <input type="checkbox" id="contLog" checked />
-              Log GDP axis
-            </label>
-          </div>
-        </div>
-        <div id="visContinent"></div>
-        <div class="caption" id="contMsg"></div>
-      </div>
-    </section>
 
-    <!-- Density -->
-    <section class="section" id="density">
-      <div class="section-title">
-        <h2>How is adoption distributed?</h2>
-        <div class="small">Kernel density of country-level internet users (% of population)</div>
-      </div>
-      <div class="viz">
-        <div class="card header" style="padding:10px; margin-bottom:8px">
-          <div class="controls" id="denControls" style="display:flex">
-            <label>Year:
-              <select id="denYear"></select>
-            </label>
-          </div>
-          <div class="small">Translucent area shows share of countries by adoption level.</div>
-        </div>
-        <div id="visDensity"></div>
-        <div id="denMsg" class="caption"></div>
-      </div>
-    </section>
-
-    <!-- Sources -->
-    <section class="section" id="sources">
-      <div class="section-title">
-        <h2>Data & Assets</h2>
-        <div class="small">Place these in <code>/data</code></div>
-      </div>
-      <div class="card h small">
-        <strong>Local files used</strong>:
-        <div style="margin-top:6px">
-          <code>countries.geojson</code>,
-          <code>internet_users_2021.csv</code>,
-          <code>share-of-individuals-using-the-internet.csv</code>,
-          <code>API_NY.GDP.PCAP.CD_DS2_en_csv_v2_24794.csv</code>,
-          <code>data-only-mobile-broadband-basket_1760356423859.csv</code>,
-          <code>API_EG.ELC.ACCS.ZS_DS2_en_csv_v2_568.csv</code>
+      <div class="card h quick-compare" style="margin-top:16px">
+        <div class="eyebrow">Quick compare</div>
+        <div class="qc-row"><label class="small" for="qcA">Country A</label><select id="qcA"></select></div>
+        <div class="qc-row"><label class="small" for="qcB">Country B</label><select id="qcB"></select></div>
+        <div id="qcOut" class="small" style="margin-top:10px">
+          <table class="qc-table">
+            <thead><tr><th></th><th>Internet %</th><th>GDP pc (US$)</th><th>Gap (pp)</th></tr></thead>
+            <tbody>
+              <tr><td>A</td><td>—</td><td>—</td><td>—</td></tr>
+              <tr><td>B</td><td>—</td><td>—</td><td>—</td></tr>
+            </tbody>
+          </table>
         </div>
       </div>
-    </section>
+    </aside>
   </main>
 </div>
 
-<!-- ===== Footer ===== -->
 <footer class="container" style="margin:24px 0 80px">
-  <div class="small">Built with Vega-Lite.</div>
+  <div class="small">
+    Built with Vega-Lite. <br>
+    <em>Some text and code improvements (grammar, formatting, and minor data-binding fixes)
+    were assisted by ChatGPT for refinement and non-creative coding support (e.g., color ID lookups).</em>
+  </div>
 </footer>
 
-<!-- App -->
 <script src="index.js"></script>
 </body>
 </html>
