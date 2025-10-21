@@ -325,9 +325,9 @@ function prosperitySpec(rows, isLog){
       { mark:{ type:"point", filled:true, opacity:0.45, size:55, color:"#93c5fd" },
         encoding:{
           x: isLog
-            ? { field:"gdp", type:"quantitative", title:"GDP per capita (US$)", scale:{ type:"log" } }
-            : { field:"gdp", type:"quantitative", title:"GDP per capita (US$)", scale:{ nice:true } },
-          y: { field:"internet", type:"quantitative", title:"Internet users (% of population)", scale:{domain:[0,100]} },
+            ? { field:"gdp", type:"quantitative", title:"GDP per capita (US$)", scale:{ type:"log" }, grid:false }
+            : { field:"gdp", type:"quantitative", title:"GDP per capita (US$)", scale:{ nice:true }, grid:false },
+          y: { field:"internet", type:"quantitative", title:"Internet users (% of population)", scale:{domain:[0,100]}, grid:false },
           tooltip:[
             {field:"country", title:"Country"},
             {field:"gdp", title:"GDP pc (US$)", format: ",.0f"},
@@ -365,9 +365,9 @@ function continentSpec(points, isLog){
         mark:{ type:"point", filled:true, opacity:0.9 },
         encoding:{
           x: isLog
-            ? { field:"gdp_mean", type:"quantitative", scale:{type:"log"}, title:"GDP per capita (US$) — mean" }
-            : { field:"gdp_mean", type:"quantitative", title:"GDP per capita (US$) — mean" },
-          y: { field:"internet_mean", type:"quantitative", title:"Internet users (% of population) — mean", scale:{domain:[0,100]} },
+            ? { field:"gdp_mean", type:"quantitative", scale:{type:"log"}, title:"GDP per capita (US$) — mean", grid:false }
+            : { field:"gdp_mean", type:"quantitative", title:"GDP per capita (US$) — mean", grid:false },
+          y: { field:"internet_mean", type:"quantitative", title:"Internet users (% of population) — mean", scale:{domain:[0,100]}, grid:false },
           size:{ field:"n", type:"quantitative", title:"Countries", scale:{range:[80,900]} },
           color:{ field:"continent", type:"nominal", title:"Continent", legend:{orient:"right"} },
           tooltip:[
