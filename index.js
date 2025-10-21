@@ -9,7 +9,7 @@ const IU_OWID_LONG = "data/share-of-individuals-using-the-internet.csv";
 const GDP_FILE     = "data/API_NY.GDP.PCAP.CD_DS2_en_csv_v2_24794.csv";
 const GEOJSON      = "data/countries.geojson";
 const WB_ELEC      = "data/API_EG.ELC.ACCS.ZS_DS2_en_csv_v2_568.csv";
-const POP_FILE     = "API_SP.POP.TOTL_DS2_en_csv_v2_23043.csv";  
+const POP_FILE     = "data/API_SP.POP.TOTL_DS2_en_csv_v2_23043.csv";  
 
 /* =================== HELPERS =================== */
 const stripBOMCRLF = t => {
