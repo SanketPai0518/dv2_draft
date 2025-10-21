@@ -57,7 +57,7 @@
 
   /* Keep your precise alignment for the takeaways card */
   .takeaways{
-    margin: 20px 0 0 150px;    /* as requested */
+    margin: 20px 0 0 150px;   
     width: calc(100% - 300px);
   }
   .key-takeaways h2{ text-align:center; margin: 0 0 10px; }
@@ -72,8 +72,9 @@
   /* ===== Right rail next to main visualisations ===== */
   .main-with-fact{
     display:grid;
-    grid-template-columns: 1fr 300px; /* main column + right rail */
-    gap:16px;
+    grid-template-columns: 1fr 280px; /* main column + right rail (slightly narrower) */
+    gap:12px;                         /* tighter gap */
+    overflow:hidden;                  /* avoid edge clipping */
   }
   .fact-col{ position:sticky; top:84px; align-self:start; }
   .fun-fact .eyebrow{
@@ -83,9 +84,11 @@
   #visCables{ width:100%; }
   
   /* Charts scale with their container */
-  #visMap2021, #visGap, #visProsperity, #visContinent, #visDensity { width: 100%; }
-  .viz > div { max-width: 100%; }
+  #visMap2021, #visGap, #visProsperity, #visContinent, #visDensity { width: 85%; }
+  .viz {
+    width: 90%;         /* make the cards narrower */
+    margin: 0 auto;     /* keep them centred */
+  }
   
-  /* Optional: hide vega action buttons if they appear */
+
   .vega-actions { display:none !important; }
-  
