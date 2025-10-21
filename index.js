@@ -387,7 +387,7 @@ function continentSpec(points, isLog){
   };
 }
 
-/* ============ NEW: TOP COUNTRIES STACKED/GROUPED (facet) ============ */
+/* ============ TOP COUNTRIES (facet: Users vs %) — FIXED ============ */
 function topCountriesSpec(rows){
   const enriched = rows.map(r => ({ ...r, total_users: (r.internet/100)*r.population }));
   const byUsers = [...enriched].sort((a,b)=>b.total_users - a.total_users).slice(0,5)
@@ -400,14 +400,15 @@ function topCountriesSpec(rows){
     background:null,
     data:{ values:[...byUsers, ...byPercent] },
     facet:{ column:{ field:"category", type:"nominal", header:{labelColor:"#fff"} } },
+    // >>> KEY FIX: make each facet use its own x-scale so bars fill the space
+    resolve:{ scale:{ x:"independent" } },
     spec:{
       width: "container",
-      height: 420,
+      height: 520,                           // a bit taller for readability
       autosize:{ type:"fit", contains:"padding" },
       mark:{ type:"bar", cornerRadiusEnd:4 },
       encoding:{
-        x:{ field:"value", type:"quantitative", axis:{grid:false,labelColor:"#dbeafe"},
-            title:null },
+        x:{ field:"value", type:"quantitative", axis:{grid:false,labelColor:"#dbeafe"}, title:null },
         y:{ field:"country", type:"nominal", sort:"-x", axis:{grid:false,labelColor:"#dbeafe"}, title:null },
         color:{ field:"country", type:"nominal", legend:null },
         tooltip:[
@@ -421,7 +422,7 @@ function topCountriesSpec(rows){
   };
 }
 
-/* ============ NEW: RENDERER FOR TOP COUNTRIES ============ */
+/* ============ RENDERER FOR TOP COUNTRIES ============ */
 async function renderTopCountries(){
   const msg = document.getElementById('topCountriesMsg');
   const mount = document.getElementById('visTopCountries');
@@ -734,4 +735,3 @@ function cablesMiniSpec(){
   // If Quick Compare panel exists, render it.
   if (document.getElementById('qcA')) renderQuickCompare();
 })();
- 
